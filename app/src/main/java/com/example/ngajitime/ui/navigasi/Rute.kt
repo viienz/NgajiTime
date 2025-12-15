@@ -1,6 +1,7 @@
 package com.example.ngajitime.ui.navigasi
 
 object Rute {
+    const val LOGIN = "layar_login"
     const val INTRO = "layar_intro"
     const val BERANDA = "layar_beranda"
 

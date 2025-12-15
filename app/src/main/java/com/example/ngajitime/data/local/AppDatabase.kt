@@ -11,7 +11,7 @@ import com.example.ngajitime.data.local.entity.TargetUser
 
 @Database(
     entities = [SesiNgaji::class, TargetUser::class, SurahProgress::class], // <-- Tambah SurahProgress
-    version = 2, // <-- WAJIB: Naikkan jadi 2 karena struktur berubah
+    version = 3, // <-- WAJIB: Naikkan jadi 2 karena struktur berubah
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

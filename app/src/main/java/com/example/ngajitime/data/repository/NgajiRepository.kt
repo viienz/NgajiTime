@@ -53,6 +53,9 @@ class NgajiRepository @Inject constructor(
 
     // Logic Cerdas (Estimasi Waktu)
     suspend fun getRataRataKecepatan(): Long {
-        return sesiDao.getAverageSecondsPerPage() ?: 180L // Default 3 menit jika data kosong
+        return sesiDao.getAverageSecondsPerPage() ?: 180L
+    }
+    suspend fun hapusUser() {
+        targetDao.deleteUser()
     }
 }

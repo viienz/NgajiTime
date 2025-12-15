@@ -9,20 +9,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TargetDao {
-    // Simpan Target Baru
+    // Perhatikan: FROM target_user (Bukan tabel_target_user)
+    @Query("SELECT * FROM target_user LIMIT 1")
+    fun getUserTarget(): Flow<TargetUser?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveTarget(user: TargetUser)
 
-    // Ambil Data Profil
-    @Query("SELECT * FROM tabel_target_user WHERE id = 1 LIMIT 1")
-    fun getUserTarget(): Flow<TargetUser?>
+    @Query("UPDATE target_user SET currentStreak = :streak, lastStreakDate = :date WHERE id = 1")
+    suspend fun updateStreak(streak: Int, date: Long)
 
-    // Update Streak
-    @Query("UPDATE tabel_target_user SET currentStreak = :newStreak, lastDateLog = :todayDate WHERE id = 1")
-    suspend fun updateStreak(newStreak: Int, todayDate: Long)
+    @Query("UPDATE target_user SET totalAyatDibaca = totalAyatDibaca + :ayat WHERE id = 1")
+    suspend fun addProgressAyat(ayat: Int)
 
-    // --- PERBAIKAN DI SINI ---
-    // Ganti 'totalHalamanDibaca' menjadi 'totalAyatDibaca'
-    @Query("UPDATE tabel_target_user SET totalAyatDibaca = totalAyatDibaca + :ayatBaru WHERE id = 1")
-    suspend fun addProgressAyat(ayatBaru: Int)
+    @Query("DELETE FROM target_user")
+    suspend fun deleteUser()
 }

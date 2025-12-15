@@ -14,11 +14,19 @@ class ProfilViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
 
-    // Ambil data user secara real-time
+    // 1. Ambil data user secara real-time
     val userTarget = repository.getUserTarget()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Fungsi Ganti Nama
+    // 2. Fungsi Logout (Hapus Data)
+    fun logout(onLogoutSukses: () -> Unit) {
+        viewModelScope.launch {
+            repository.hapusUser()
+            onLogoutSukses()
+        }
+    }
+
+    // 3. Fungsi Ganti Nama (FITUR ANDA TETAP AMAN) ✅
     fun updateNama(namaBaru: String) {
         val currentUser = userTarget.value ?: return
         viewModelScope.launch {
@@ -26,9 +34,11 @@ class ProfilViewModel @Inject constructor(
         }
     }
 
-    // Fungsi Ganti Target (PENTING)
+    // 4. Fungsi Ganti Target (VERSI UPGRADE LEBIH PINTAR) 🧠
+    // Menggunakan logika 'Level Baca' agar targetnya realistis
     fun updateTarget(mode: String, nilai: Int) {
         val currentUser = userTarget.value ?: return
+
         viewModelScope.launch {
             var targetAyatBaru = 0
             var durasiHari = 0
@@ -36,9 +46,16 @@ class ProfilViewModel @Inject constructor(
 
             if (mode == "WAKTU") {
                 // Mode Santai: Input = Menit
-                // Rumus: 1 Menit = 3 Ayat (Standar)
                 waktuMenit = nilai
-                targetAyatBaru = nilai * 3
+
+                // Cek kecepatan baca user (data dari login awal)
+                val detikPerAyat = if (currentUser.levelBaca == "PEMULA") 25 else 15
+
+                // Rumus: (Menit * 60) / DetikPerAyat
+                // Contoh: 15 menit lancar = (15*60)/15 = 60 Ayat.
+                // Contoh: 15 menit pemula = (15*60)/25 = 36 Ayat.
+                targetAyatBaru = (nilai * 60) / detikPerAyat
+
             } else {
                 // Mode Khatam: Input = Hari
                 // Rumus: 6236 Ayat / Hari

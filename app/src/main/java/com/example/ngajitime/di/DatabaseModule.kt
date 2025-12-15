@@ -14,19 +14,28 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
-@InstallIn(SingletonComponent::class) // Modul ini hidup selama aplikasi hidup
+@InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    // --- 1. PABRIK DATABASE UTAMA ---
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "ngaji_time_database" // Nama file database di HP user
+            "ngaji_database"
         )
-            .fallbackToDestructiveMigration() // Reset DB jika versi berubah (aman untuk dev)
+            // INI OBAT ANTI-CRASH YANG KITA DISKUSIKAN TADI
+            .fallbackToDestructiveMigration()
             .build()
+    }
+
+    // --- 2. PENYEDIA DAO (ALAT AMBIL DATA) ---
+
+    @Provides
+    fun provideTargetDao(database: AppDatabase): TargetDao {
+        return database.targetDao()
     }
 
     @Provides
@@ -35,10 +44,7 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideTargetDao(database: AppDatabase): TargetDao {
-        return database.targetDao()
+    fun provideSurahDao(database: AppDatabase): SurahDao {
+        return database.surahDao()
     }
-
-    @Provides
-    fun provideSurahDao(database: AppDatabase): SurahDao = database.surahDao()
 }
