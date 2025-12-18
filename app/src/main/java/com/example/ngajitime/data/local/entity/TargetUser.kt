@@ -20,6 +20,7 @@ data class TargetUser(
     val waktuLuangMenit: Int,
     val durasiTargetHari: Int,
     val targetAyatHarian: Int,
+    val isStreakFreeze: Boolean = false,
 
     // --- PROGRESS ---
     val totalAyatDibaca: Int = 0,

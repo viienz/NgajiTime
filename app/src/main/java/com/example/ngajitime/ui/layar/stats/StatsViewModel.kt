@@ -2,22 +2,23 @@ package com.example.ngajitime.ui.layar.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.ngajitime.data.repository.NgajiRepository
 import com.example.ngajitime.data.local.entity.TargetUser
+import com.example.ngajitime.data.repository.NgajiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
-import kotlinx.coroutines.flow.collectLatest
+import kotlin.collections.filter
 
-// Model data sederhana untuk grafik
+// Model data (Tetap sama)
 data class DataGrafik(
-    val hari: String, // "Sen", "Sel", "Rab"
+    val hari: String,
     val totalAyat: Int
 )
 
@@ -26,72 +27,95 @@ class StatsViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
 
-    private val _dataMingguan = MutableStateFlow<List<DataGrafik>>(emptyList())
-    val dataMingguan: StateFlow<List<DataGrafik>> = _dataMingguan.asStateFlow()
+    // 1. DATA USER
+    val userTarget: StateFlow<TargetUser?> = repository.getUserTarget()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val _totalAyatMingguIni = MutableStateFlow(0)
-    val totalAyatMingguIni: StateFlow<Int> = _totalAyatMingguIni.asStateFlow()
-    private val _userTarget = MutableStateFlow<TargetUser?>(null)
-    val userTarget: StateFlow<TargetUser?> = _userTarget.asStateFlow()
+    // 2. NAVIGASI MINGGUAN (0 = Minggu Ini, -1 = Minggu Lalu, dst)
+    private val _offsetMinggu = MutableStateFlow(0)
+    val offsetMinggu: StateFlow<Int> = _offsetMinggu
 
-    init {
-        muatDataMingguan()
-        muatDataUser()
-    }
+    // 3. LOGIKA GRAFIK
+    val dataMingguan: StateFlow<List<DataGrafik>> = combine(repository.allRiwayatSesi, _offsetMinggu) { semuaSesi, offset ->
+        val listGrafik = mutableListOf<DataGrafik>()
+        val calendar = Calendar.getInstance()
+        val formatHari = SimpleDateFormat("EEE", Locale("id", "ID")) // Sen, Sel, Rab
 
-    private fun muatDataUser() {
-        viewModelScope.launch {
-            repository.getUserTarget().collectLatest { user ->
-                _userTarget.value = user
-            }
+        // A. Tentukan Hari Acuan
+        calendar.add(Calendar.WEEK_OF_YEAR, offset)
+
+        // B. Mundur 6 hari ke belakang (Start Date)
+        calendar.add(Calendar.DAY_OF_YEAR, -6)
+
+        // C. Loop 7 Hari ke depan
+        for (i in 0..6) {
+            // PERBAIKAN DI SINI (Memastikan tipe datanya Long/Millis)
+
+            // 1. Set Awal Hari (00:00:00)
+            val calStart = calendar.clone() as Calendar
+            calStart.set(Calendar.HOUR_OF_DAY, 0)
+            calStart.set(Calendar.MINUTE, 0)
+            calStart.set(Calendar.SECOND, 0)
+            calStart.set(Calendar.MILLISECOND, 0)
+            val startOfDay = calStart.timeInMillis // Tipe: Long
+
+            // 2. Set Akhir Hari (23:59:59)
+            val calEnd = calendar.clone() as Calendar
+            calEnd.set(Calendar.HOUR_OF_DAY, 23)
+            calEnd.set(Calendar.MINUTE, 59)
+            calEnd.set(Calendar.SECOND, 59)
+            val endOfDay = calEnd.timeInMillis // Tipe: Long
+
+            val namaHari = formatHari.format(calendar.time)
+
+            // D. Filter Sesi (Gunakan 'tanggalSesi' bukan 'waktuMulai')
+            val totalAyatHariIni = semuaSesi
+                .filter { it.tanggalSesi in startOfDay..endOfDay } // <--- PERBAIKAN NAMA VARIABEL
+                .sumOf { it.halamanSelesai } // (Asumsi halamanSelesai = Ayat)
+
+            listGrafik.add(DataGrafik(namaHari, totalAyatHariIni))
+
+            // Lanjut ke hari besoknya
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
         }
-    }
+        listGrafik
 
-    private fun muatDataMingguan() {
-        viewModelScope.launch {
-            // Ambil semua sesi (Idealnya query DB dibatasi tanggal, tapi untuk demo kita filter di sini)
-            repository.allRiwayatSesi.collectLatest { semuaSesi ->
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-                // 1. Siapkan Kalender 7 Hari Terakhir
-                val listGrafik = mutableListOf<DataGrafik>()
-                val kalender = Calendar.getInstance()
-                val formatHari = SimpleDateFormat("EEE", Locale("id", "ID")) // Sen, Sel, Rab
 
-                // Geser ke 6 hari lalu
-                kalender.add(Calendar.DAY_OF_YEAR, -6)
+    // 4. TOTAL AYAT
+    val totalAyatMingguIni: StateFlow<Int> = dataMingguan.map { list ->
+        list.sumOf { it.totalAyat }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-                var totalMinggu = 0
 
-                // 2. Loop 7 hari (Dari 6 hari lalu sampai Hari Ini)
-                for (i in 0..6) {
-                    val tanggalCek = kalender.time
-                    val namaHari = formatHari.format(tanggalCek)
+    // 5. TEXT RENTANG TANGGAL (LOGIKA PINTAR)
+    val rentangTanggal: StateFlow<String> = _offsetMinggu.map { offset ->
+        val endCal = Calendar.getInstance()
+        endCal.add(Calendar.WEEK_OF_YEAR, offset) // Tanggal Akhir (Kanan)
 
-                    // Filter sesi yang terjadi pada tanggalCek
-                    val sesiHariIni = semuaSesi.filter { sesi ->
-                        isSameDay(sesi.tanggalSesi, kalender.timeInMillis)
-                    }
+        val startCal = endCal.clone() as Calendar
+        startCal.add(Calendar.DAY_OF_YEAR, -6)   // Tanggal Awal (Kiri)
 
-                    val jumlahAyat = sesiHariIni.sumOf { it.halamanSelesai } // Ingat: kolom ini isinya Ayat
-                    totalMinggu += jumlahAyat
+        val fmtFull = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID")) // "05 Nov 2025"
+        val fmtDayMonth = SimpleDateFormat("dd MMM", Locale("id", "ID"))  // "30 Okt"
+        val fmtDayOnly = SimpleDateFormat("dd", Locale("id", "ID"))       // "10"
 
-                    listGrafik.add(DataGrafik(namaHari, jumlahAyat))
-
-                    // Geser ke hari berikutnya (Besok)
-                    kalender.add(Calendar.DAY_OF_YEAR, 1)
-                }
-
-                _dataMingguan.value = listGrafik
-                _totalAyatMingguIni.value = totalMinggu
-            }
+        // CEK: Apakah Bulan Awal & Akhir berbeda?
+        if (startCal.get(Calendar.MONTH) != endCal.get(Calendar.MONTH)) {
+            // KASUS BEDA BULAN (Contoh: 30 Okt - 05 Nov 2025)
+            // Kita tampilkan Bulan di bagian kiri juga
+            "${fmtDayMonth.format(startCal.time)} - ${fmtFull.format(endCal.time)}"
+        } else {
+            // KASUS SATU BULAN (Contoh: 10 - 16 Nov 2025)
+            // Cukup tanggal saja di kiri
+            "${fmtDayOnly.format(startCal.time)} - ${fmtFull.format(endCal.time)}"
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    // Helper: Cek apakah dua timestamp ada di hari yang sama
-    private fun isSameDay(time1: Long, time2: Long): Boolean {
-        val cal1 = Calendar.getInstance().apply { timeInMillis = time1 }
-        val cal2 = Calendar.getInstance().apply { timeInMillis = time2 }
-        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-                cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+
+    // 6. FUNGSI GESER
+    fun geserMinggu(arah: Int) {
+        _offsetMinggu.value += arah
     }
 }

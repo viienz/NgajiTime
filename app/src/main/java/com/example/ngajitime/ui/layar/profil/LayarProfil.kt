@@ -11,16 +11,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,11 +36,10 @@ import com.example.ngajitime.ui.komponen.NgajiBottomBar
 @Composable
 fun LayarProfil(
     viewModel: ProfilViewModel = hiltViewModel(),
-    onBack: () -> Unit,
-    onLogout: () -> Unit,
     onKeBeranda: () -> Unit,
     onKeSurah: () -> Unit,
-    onKeStats: () -> Unit
+    onKeStats: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val user by viewModel.userTarget.collectAsState()
     var showDialogTarget by remember { mutableStateOf(false) }
@@ -72,24 +74,14 @@ fun LayarProfil(
             ) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(60.dp))
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Nama & Email
-            Text(
-                text = user?.namaUser ?: "Sobat Ngaji",
-                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black
-            )
-            // Tampilkan status email
-            Text(
-                text = if (user?.email != null) "${user?.email}" else "Mode Tamu (Offline)",
-                fontSize = 14.sp, color = Color.Gray
-            )
+            Text(user?.namaUser ?: "Sobat Ngaji", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(if (user?.email != null) "${user?.email}" else "Mode Tamu (Offline)", fontSize = 14.sp, color = Color.Gray)
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 2. KARTU TARGET
-            Text("Target Saat Ini", modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+            // 2. KARTU TARGET (FITUR LAMA)
+            Text("Pengaturan Ngaji", modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
 
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { showDialogTarget = true },
@@ -110,35 +102,43 @@ fun LayarProfil(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 3. [BARU] STREAK FREEZE SWITCH ❄️
+            ItemSwitch(
+                icon = Icons.Outlined.AcUnit,
+                judul = "Mode Cuti (Streak Freeze)",
+                desc = "Streak tidak hilang saat absen",
+                isChecked = user?.isStreakFreeze ?: false, // Pastikan kolom ini ada di Entity
+                onCheckedChange = { viewModel.toggleStreakFreeze(it) }
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 3. LOGIKA TOMBOL AKUN (CERDAS) 🧠
+            // 4. LOGIKA TOMBOL AKUN
             if (user?.email == null) {
-                // --- JIKA TAMU (Belum Ada Email) ---
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)), // Oranye Muda
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
                     border = BorderStroke(1.dp, Color(0xFFFF9800)),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("⚠️ Akun Belum Diamankan", fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
-                        Text("Data kamu hanya ada di HP ini. Hubungkan ke Google agar data aman saat ganti HP.", fontSize = 12.sp)
+                        Text("Data kamu hanya ada di HP ini.", fontSize = 12.sp)
                     }
                 }
-
                 Button(
-                    onClick = { Toast.makeText(context, "Segera Hadir: Sinkronisasi Google!", Toast.LENGTH_SHORT).show() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)), // Biru
+                    onClick = { Toast.makeText(context, "Segera Hadir!", Toast.LENGTH_SHORT).show() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
                     Text("Hubungkan ke Google", fontWeight = FontWeight.Bold)
                 }
             } else {
-                // --- JIKA SUDAH LOGIN ---
                 Button(
                     onClick = { viewModel.logout { onLogout() } },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)), // Merah
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
@@ -150,7 +150,6 @@ fun LayarProfil(
         }
     }
 
-    // --- POPUP DIALOG TARGET (Tetap Sama) ---
     if (showDialogTarget) {
         DialogEditTarget(
             currentMode = user?.modeTarget ?: "WAKTU",
@@ -161,6 +160,37 @@ fun LayarProfil(
                 showDialogTarget = false
             }
         )
+    }
+}
+
+// --- KOMPONEN SWITCH BARU ---
+@Composable
+fun ItemSwitch(
+    icon: ImageVector,
+    judul: String,
+    desc: String,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = Color(0xFF03A9F4))
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(judul, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(desc, fontSize = 10.sp, color = Color.Gray)
+            }
+            Switch(
+                checked = isChecked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF03A9F4), checkedTrackColor = Color(0xFFE1F5FE))
+            )
+        }
     }
 }
 

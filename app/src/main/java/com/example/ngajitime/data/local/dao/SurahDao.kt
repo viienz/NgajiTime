@@ -27,4 +27,6 @@ interface SurahDao {
     // Ambil Surah Terakhir Dibaca (Untuk Widget di Beranda)
     @Query("SELECT * FROM tabel_surah_progress WHERE lastUpdated > 0 ORDER BY lastUpdated DESC LIMIT 1")
     fun getTerakhirDibaca(): Flow<SurahProgress?>
+
+
 }

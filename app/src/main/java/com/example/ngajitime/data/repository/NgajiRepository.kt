@@ -45,6 +45,8 @@ class NgajiRepository @Inject constructor(
         }
     }
 
+    fun getAllSurahProgress(): Flow<List<SurahProgress>> = surahDao.getAllSurah()
+
     // --- 4. FUNGSI SESI NGAJI ---
     suspend fun insertSesi(sesi: SesiNgaji) = sesiDao.insertSesi(sesi)
 
@@ -57,5 +59,8 @@ class NgajiRepository @Inject constructor(
     }
     suspend fun hapusUser() {
         targetDao.deleteUser()
+    }
+    suspend fun setStreakFreeze(isActive: Boolean) {
+        targetDao.updateStreakFreeze(isActive)
     }
 }

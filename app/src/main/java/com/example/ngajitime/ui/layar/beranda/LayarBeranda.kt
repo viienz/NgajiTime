@@ -1,18 +1,16 @@
 package com.example.ngajitime.ui.layar.beranda
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,281 +18,437 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.ngajitime.R
+import com.example.ngajitime.ui.komponen.MenuAktif
+import com.example.ngajitime.ui.komponen.NgajiBottomBar
+import java.util.Calendar
 
-
+// --- WARNA ---
+val HijauStreak = Color(0xFFAEEA5C)
+val HijauTombol = Color(0xFF4CAF50)
+val BiruMudaBg = Color(0xFFF0F4F8)
 
 @Composable
 fun LayarBeranda(
-    viewModel: BerandaViewModel = hiltViewModel(),
-    onKlikMulai: () -> Unit = {} ,
-    onKeListSurah: () -> Unit = {},
-    onKeStats: () -> Unit = {},
-    onKeProfil: () -> Unit = {}
+    viewModel: BerandaViewModel = hiltViewModel(), // Inject ViewModel
+    onKeSurah: () -> Unit,
+    onKeStats: () -> Unit,
+    onKeProfil: () -> Unit,
+    onKeTimer: () -> Unit
 ) {
-    // 1. AMBIL DATA DARI VIEWMODEL
-    val userTarget by viewModel.userTarget.collectAsState()
-    val progressHariIni by viewModel.halamanHariIni.collectAsState() // Kita anggap ini "ayat" dulu sementara
+    // --- 1. AMBIL DATA REAL-TIME DARI DATABASE ---
+    val user by viewModel.userTarget.collectAsState()
+    val progressPersen by viewModel.progressPersen.collectAsState()
+    val lastReadData by viewModel.lastRead.collectAsState()
+    val halamanHariIni by viewModel.halamanHariIni.collectAsState()
 
-    // --- PERBAIKAN DI SINI (Ganti Halaman jadi Ayat) ---
-    // Ambil target ayat (default 50 jika null)
-    val targetHarian = userTarget?.targetAyatHarian ?: 50
+    val targetAyat = user?.targetAyatHarian ?: 1
+    val currentAyat = halamanHariIni
 
-    // Hitung Sisa Target
-    val sisaTarget = (targetHarian - progressHariIni).coerceAtLeast(0)
+    // --- 2. SIAPKAN VARIABEL UI ---
+    val namaUser = user?.namaUser ?: "Sobat Ngaji"
+    val streakCount = user?.currentStreak ?: 0
 
-    // Warna Latar Hijau Segar
-    val brushHeader = Brush.verticalGradient(
-        colors = listOf(Color(0xFF66BB6A), Color(0xFF43A047))
-    )
+    // Data Last Read
+    val lastReadSurah = lastReadData?.namaSurah ?: "Belum ada"
+    val lastReadAyat = lastReadData?.ayatTerakhirDibaca ?: 0
+    val lastReadInfo = if (lastReadData != null) "Lanjutkan progressmu" else "Ayo mulai mengaji"
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(
-            onKeListSurah = onKeListSurah,
-            onKeStats = onKeStats,
-            onKeProfil = onKeProfil
-        ) },
+        // FAB: Tombol Timer (Play)
         floatingActionButton = {
-            TombolMulaiNgaji(onClick = onKlikMulai)
-
-        },
-        floatingActionButtonPosition = FabPosition.Center
-    ) { paddingValues ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-        ) {
-            // --- HEADER AREA ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .background(brushHeader)
-                    .padding(24.dp)
+            FloatingActionButton(
+                onClick = onKeTimer,
+                containerColor = HijauTombol,
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier.size(64.dp)
             ) {
-                Column {
-                    // Sapaan & Streak
+                Icon(Icons.Default.PlayArrow, contentDescription = "Mulai Timer", modifier = Modifier.size(32.dp))
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End,
+
+        // BOTTOM BAR: Navigasi Bawah
+        bottomBar = {
+            NgajiBottomBar(
+                menuAktif = MenuAktif.BERANDA,
+                onKeBeranda = {},
+                onKeSurah = onKeSurah,
+                onKeStats = onKeStats,
+                onKeProfil = onKeProfil
+            )
+        },
+        containerColor = BiruMudaBg
+    ) { padding ->
+
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 100.dp) // Padding bawah agar tidak ketutup FAB
+        ) {
+            // A. HEADER SECTION (Kartu Awan)
+            item {
+                HeaderSection(namaUser = namaUser)
+            }
+
+            // B. KONTEN UTAMA
+            item {
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    // Jarak Header ke Streak (Diperkecil agar rapi)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Kartu Streak (Data Asli)
+                    StreakCardLarge(streakCount = streakCount)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Baris Progress & Status
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column {
-                            Text(
-                                text = "Assalamu'alaikum,",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = userTarget?.namaUser ?: "Sobat Ngaji",
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        ProgressHarianCard(
+                            progressPersen = progressPersen,
+                            currentAyat = currentAyat,  // <--- Kirim Ayat Terbaca
+                            targetAyat = targetAyat,    // <--- Kirim Target User
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatusBadgeCard(modifier = Modifier.weight(1f))
+                    }
 
-                        // Chip Streak
-                        Surface(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
-                                Text(
-                                    text = "${userTarget?.currentStreak ?: 0} Hari",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Kartu Terakhir Dibaca (Data Asli)
+                    LastReadCard(
+                        surah = lastReadSurah,
+                        ayat = lastReadAyat,
+                        info = lastReadInfo
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Tombol Hijau Panjang (Ke List Surah)
+                    Button(
+                        onClick = onKeSurah,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = HijauTombol),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text("Mulai Mengaji", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Progress Bar Khatam (Contoh dummy dulu)
-                    Text("Progress Khatam", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { 0.05f }, // Nanti kita ambil rumus (totalAyatDibaca / 6236)
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                        color = Color(0xFFFFD700),
-                        trackColor = Color.White.copy(alpha = 0.3f),
-                    )
+                    // Kalender (Visual Saja)
+                    KalenderMingguanSection()
                 }
-            }
-
-            // --- KARTU TARGET HARIAN ---
-            KartuTargetHarian(
-                target = targetHarian,
-                sisa = sisaTarget,
-                progress = progressHariIni
-            )
-
-            // --- FITUR SMART ESTIMATION ---
-            Text(
-                text = "Punya waktu luang berapa lama?",
-                modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp),
-                fontWeight = FontWeight.Bold,
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ChipWaktu(10, viewModel)
-                ChipWaktu(15, viewModel)
-                ChipWaktu(30, viewModel)
             }
         }
     }
 }
 
+// ================= KOMPONEN UI =================
+
 @Composable
-fun KartuTargetHarian(target: Int, sisa: Int, progress: Int) {
+fun HeaderSection(namaUser: String) {
+    // Ambil Jam Sistem Saat Ini
+    val calendar = Calendar.getInstance()
+    val jam = calendar.get(Calendar.HOUR_OF_DAY)
+    val menit = calendar.get(Calendar.MINUTE)
+
+    // Format Jam (misal 08:05)
+    val jamString = String.format("%02d : %02d", jam, menit)
+    val infoWaktu = getInfoWaktu(jam)
+
+    // Gunakan CARD agar sudut melengkung sempurna
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .offset(y = (-40).dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        shape = RoundedCornerShape(16.dp)
+            .padding(horizontal = 20.dp) // Jarak Kiri Kanan
+            .padding(top = 24.dp)        // Jarak Atas
+            .height(180.dp),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Target Hari Ini", color = Color.Gray, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(4.dp))
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 1. Background Image
+            Image(
+                painter = painterResource(id = R.drawable.bg_header_awan), // Pastikan file ada
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
-            // Angka Besar
-            Row(verticalAlignment = Alignment.Bottom) {
+            // 2. Overlay Gelap
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f))
+            )
+
+            // 3. Konten Teks
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxSize()
+            ) {
+                // Baris Atas
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text("Assalamualaikum,", color = Color.White, fontSize = 12.sp)
+                        Text(namaUser, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                // Jam & Info (Tengah)
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = jamString,
+                            color = Color.White,
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            style = androidx.compose.ui.text.TextStyle(
+                                shadow = androidx.compose.ui.graphics.Shadow(
+                                    color = Color.Black.copy(alpha = 0.3f),
+                                    blurRadius = 10f
+                                )
+                            )
+                        )
+                        Surface(
+                            color = Color.White.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(
+                                text = infoWaktu,
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StreakCardLarge(streakCount: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = HijauStreak)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Day Streak", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF263238))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "$sisa",
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E7D32)
-                )
-                // UBAH TEKS JADI AYAT
-                Text(
-                    text = "/ $target Ayat",
-                    fontSize = 20.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                    "Kamu Hebat, Lanjutkan\nIstiqomahnya 🔥",
+                    fontSize = 12.sp,
+                    color = Color(0xFF455A64),
+                    lineHeight = 16.sp
                 )
             }
+            Text("$streakCount", fontSize = 64.sp, fontWeight = FontWeight.Bold, color = Color(0xFF263238))
+        }
+    }
+}
 
+@Composable
+fun ProgressHarianCard(
+    progressPersen: Int,
+    modifier: Modifier = Modifier,
+    currentAyat: Int,
+    targetAyat: Int,
+) {
+    Card(
+        modifier = modifier.height(140.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Progress", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = Color.Blue, modifier = Modifier.size(16.dp))
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    // TAMPILKAN ANGKA TARGET (Koneksi ke Fitur Lama) 🎯
+                    Text(
+                        text = "$currentAyat / $targetAyat Ayat", // Contoh: "15 / 30 Ayat"
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Teks Status (Berubah sesuai kondisi)
+                    val pesanSemangat = if (progressPersen >= 100) "Target Tercapai! 🎉" else "Sedikit lagi!"
+                    Text(
+                        text = pesanSemangat,
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                }
+
+                Box(contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = { progressPersen / 100f },
+                        modifier = Modifier.size(50.dp),
+                        color = HijauStreak,
+                        trackColor = Color.LightGray.copy(alpha = 0.3f),
+                        strokeWidth = 5.dp
+                    )
+                    Text("$progressPersen%", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusBadgeCard(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.height(140.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp).fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Status 🏆", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(modifier = Modifier.height(8.dp))
-
-            val pesan = if (sisa == 0) "Alhamdulillah Tuntas! 🎉" else "Yuk, cicil ayatmu!"
+            // Ikon Piala (Safe Fallback)
+            Image(
+                painter = painterResource(id = R.drawable.ic_trophy_badge), // Pastikan file ada
+                contentDescription = null,
+                modifier = Modifier.size(46.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = pesan,
-                color = if (sisa == 0) Color(0xFF2E7D32) else Color(0xFFFF9800),
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
+                "\"Si Paling\nRajin Mengaji\"",
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-fun TombolMulaiNgaji(onClick: () -> Unit) {
-    FloatingActionButton(
-        onClick = onClick,
-        containerColor = Color(0xFFFFD700),
-        contentColor = Color.Black,
-        modifier = Modifier.size(72.dp).offset(y = (40).dp),
-        shape = CircleShape
+fun LastReadCard(surah: String, ayat: Int, info: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = "Mulai Ngaji",
-            modifier = Modifier.size(36.dp)
-        )
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Ikon Buku (Safe Fallback)
+            Image(
+                painter = painterResource(id = R.drawable.ic_last_read_book), // Pastikan file ada
+                contentDescription = null,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text("Terakhir dibaca", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val teksAyat = if(ayat > 0) "Ayat $ayat" else ""
+                    Text("$surah $teksAyat", fontWeight = FontWeight.Medium)
+                }
+                Text("($info)", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
     }
 }
 
 @Composable
-fun ChipWaktu(menit: Int, viewModel: BerandaViewModel) {
-    SuggestionChip(
-        onClick = {
-            viewModel.hitungEstimasi(menit) { hasil ->
-                // Hasil estimasi (sementara masih logika halaman, nanti kita update jadi ayat)
-                println("Estimasi: $hasil")
-            }
-        },
-        label = { Text("$menit Menit") },
-        icon = { Icon(Icons.Default.Timer, contentDescription = null, modifier = Modifier.size(16.dp)) },
-        colors = SuggestionChipDefaults.suggestionChipColors(
-            containerColor = Color.White,
-            labelColor = Color(0xFF2E7D32)
-        ),
-        border = SuggestionChipDefaults.suggestionChipBorder(
-            enabled = true,
-            borderColor = Color(0xFF2E7D32)
-        )
-    )
+fun KalenderMingguanSection() {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Oktober 2025", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(modifier = Modifier.weight(1f))
+            Text("← →", fontSize = 18.sp, color = Color.Gray)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            KalenderItem("Min", "01", false)
+            KalenderItem("Sen", "02", true) // Ceritanya hari ini
+            KalenderItem("Sel", "03", false)
+            KalenderItem("Rab", "04", false)
+            KalenderItem("Ka", "05", false)
+            KalenderItem("Jum", "06", false)
+            KalenderItem("Sab", "07", false)
+        }
+    }
 }
 
 @Composable
-fun BottomNavigationBar(
-    onKeListSurah: () -> Unit = {},
-    onKeStats: () -> Unit = {},
-    onKeProfil: () -> Unit = {}
-) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
+fun KalenderItem(hari: String, tanggal: String, isActive: Boolean) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) HijauStreak else Color.Transparent)
+            .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {
-        // Tombol Beranda (Aktif)
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = null) },
-            label = { Text("Beranda") },
-            selected = true,
-            onClick = { /* Sudah di beranda, tidak perlu aksi */ },
-            colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFC8E6C9))
-        )
+        Text(hari, fontSize = 12.sp, color = if (isActive) Color(0xFF263238) else Color.Gray)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(tanggal, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isActive) Color(0xFF263238) else Color.Black)
+    }
+}
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.MenuBook, contentDescription = null) }, // Ganti Icon jadi Buku
-            label = { Text("Surah") },
-            selected = false,
-            onClick = onKeListSurah // <-- Panggil aksi pindah layar
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.BarChart, contentDescription = null) }, // Icon Grafik
-            label = { Text("Stats") },
-            selected = false,
-            onClick = onKeStats
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, contentDescription = null) },
-            label = { Text("Profil") },
-            selected = false,
-            onClick = onKeProfil
-        )
-
-
+// Helper: Menentukan Waktu Sholat (Sederhana)
+fun getInfoWaktu(jam: Int): String {
+    return when (jam) {
+        in 3..4 -> "Waktu Tahajud"
+        in 5..5 -> "Waktu Subuh"
+        in 6..6 -> "Waktu Syuruq"
+        in 7..10 -> "Waktu Dhuha"
+        in 11..14 -> "Waktu Dzuhur"
+        in 15..17 -> "Waktu Ashar"
+        in 18..18 -> "Waktu Maghrib"
+        in 19..23 -> "Waktu Isya"
+        else -> "Waktu Istirahat"
     }
 }

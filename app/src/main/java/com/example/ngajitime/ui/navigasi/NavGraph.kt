@@ -41,18 +41,11 @@ fun NgajiNavGraph(
         // --- 2. RUTE BERANDA (Dashboard) ---
         composable(Rute.BERANDA) {
             LayarBeranda(
-                onKlikMulai = {
-                    // Saat tombol Play diklik, pindah ke Timer
+                onKeSurah = { navController.navigate(Rute.LIST_SURAH) },
+                onKeStats = { navController.navigate(Rute.STATS) },
+                onKeProfil = { navController.navigate(Rute.PROFIL) },
+                onKeTimer = {
                     navController.navigate(Rute.TIMER)
-                },
-                onKeListSurah = {
-                    navController.navigate(Rute.LIST_SURAH)
-                },
-                onKeStats = {
-                    navController.navigate(Rute.STATS)
-                },
-                onKeProfil = {
-                    navController.navigate(Rute.PROFIL)
                 }
             )
         }
@@ -60,12 +53,11 @@ fun NgajiNavGraph(
         // --- 3. RUTE LIST SURAH ---
         composable(Rute.LIST_SURAH) {
             LayarListSurah(
-                onKlikSurah = { surah ->
-                    // Nanti kita kembangkan fitur Detail Surah di sini
-                    println("User memilih surah: ${surah.namaSurah}")
-                },
-                onBack = {
-                    navController.popBackStack()
+                onKeBeranda = { navController.navigate(Rute.BERANDA) },
+                onKeStats = { navController.navigate(Rute.STATS) },
+                onKeProfil = { navController.navigate(Rute.PROFIL) },
+                onKlikSurah = { namaSurah ->
+                    // Nanti kita arahkan ke detail baca
                 }
             )
         }
@@ -88,28 +80,40 @@ fun NgajiNavGraph(
 
         // --- 5. RUTE STATISTIK ---
         composable(Rute.STATS) {
-            LayarStats(onBack = { navController.popBackStack() })
+            LayarStats(
+                onKeBeranda = { navController.navigate(Rute.BERANDA) },
+                onKeSurah = { navController.navigate(Rute.LIST_SURAH) },
+                onKeProfil = { navController.navigate(Rute.PROFIL) }
+            )
         }
 
         // --- 6. RUTE PROFIL ---
         composable(Rute.PROFIL) {
             LayarProfil(
-                onBack = { navController.popBackStack() },
-                onLogout = {
-                    // Hapus semua history dan kembali ke Login
-                    navController.navigate(Rute.LOGIN) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
                 // Navigasi Bottom Bar
                 onKeBeranda = {
-                    navController.navigate(Rute.BERANDA) { popUpTo(Rute.BERANDA) { inclusive = true } }
+                    navController.navigate(Rute.BERANDA) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
                 },
                 onKeSurah = {
-                    navController.navigate(Rute.LIST_SURAH)
+                    navController.navigate(Rute.LIST_SURAH) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
                 },
                 onKeStats = {
-                    navController.navigate(Rute.STATS)
+                    navController.navigate(Rute.STATS) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                },
+                // Logika Logout (Reset ke Halaman Awal)
+                onLogout = {
+                    navController.navigate(Rute.INTRO) { // Atau Rute.LOGIN
+                        popUpTo(0) { inclusive = true } // Hapus semua riwayat backstack
+                    }
                 }
             )
         }

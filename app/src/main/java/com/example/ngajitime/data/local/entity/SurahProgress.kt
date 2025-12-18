@@ -15,5 +15,5 @@ data class SurahProgress(
     // --- Progres User ---
     val ayatTerakhirDibaca: Int = 0, // User input: "Sampai ayat 5"
     val isKhatam: Boolean = false,
-    val lastUpdated: Long = 0   // Untuk mengetahui surah apa yang terakhir dibaca
+    val lastUpdated: Long = 0
 )

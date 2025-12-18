@@ -14,28 +14,16 @@ class ProfilViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
 
-    // 1. Ambil data user secara real-time
+    // 1. AMBIL DATA USER (Real-time)
     val userTarget = repository.getUserTarget()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // 2. Fungsi Logout (Hapus Data)
     fun logout(onLogoutSukses: () -> Unit) {
         viewModelScope.launch {
             repository.hapusUser()
             onLogoutSukses()
         }
     }
-
-    // 3. Fungsi Ganti Nama (FITUR ANDA TETAP AMAN) ✅
-    fun updateNama(namaBaru: String) {
-        val currentUser = userTarget.value ?: return
-        viewModelScope.launch {
-            repository.saveTarget(currentUser.copy(namaUser = namaBaru))
-        }
-    }
-
-    // 4. Fungsi Ganti Target (VERSI UPGRADE LEBIH PINTAR) 🧠
-    // Menggunakan logika 'Level Baca' agar targetnya realistis
     fun updateTarget(mode: String, nilai: Int) {
         val currentUser = userTarget.value ?: return
 
@@ -45,25 +33,18 @@ class ProfilViewModel @Inject constructor(
             var waktuMenit = 0
 
             if (mode == "WAKTU") {
-                // Mode Santai: Input = Menit
+                // Mode Santai
                 waktuMenit = nilai
 
-                // Cek kecepatan baca user (data dari login awal)
-                val detikPerAyat = if (currentUser.levelBaca == "PEMULA") 25 else 15
+                // Rumus Kecepatan Baca
+                val detikPerAyat = 20
 
-                // Rumus: (Menit * 60) / DetikPerAyat
-                // Contoh: 15 menit lancar = (15*60)/15 = 60 Ayat.
-                // Contoh: 15 menit pemula = (15*60)/25 = 36 Ayat.
                 targetAyatBaru = (nilai * 60) / detikPerAyat
-
             } else {
-                // Mode Khatam: Input = Hari
-                // Rumus: 6236 Ayat / Hari
+                // Mode Khatam
                 durasiHari = nilai
                 targetAyatBaru = if (nilai > 0) 6236 / nilai else 1
             }
-
-            // Simpan perubahan ke database
             repository.saveTarget(
                 currentUser.copy(
                     modeTarget = mode,
@@ -71,6 +52,20 @@ class ProfilViewModel @Inject constructor(
                     durasiTargetHari = durasiHari,
                     targetAyatHarian = targetAyatBaru
                 )
+            )
+        }
+    }
+
+    // 4. [BARU] FUNGSI STREAK FREEZE ❄️
+    fun toggleStreakFreeze(isAktif: Boolean) {
+        // 1. Ambil data user yang sedang tampil di layar
+        val currentUser = userTarget.value ?: return
+
+        viewModelScope.launch {
+            // 2. Kita "Copy" data user tersebut, tapi ubah bagian isStreakFreeze saja
+            // 3. Lalu Simpan ulang (Menimpa data lama dengan ID yang sama)
+            repository.saveTarget(
+                currentUser.copy(isStreakFreeze = isAktif)
             )
         }
     }
