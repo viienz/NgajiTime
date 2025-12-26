@@ -1,14 +1,14 @@
 package com.example.ngajitime.ui.navigasi
 
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController // Import ini penting
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.ngajitime.ui.layar.beranda.LayarBeranda
-import com.example.ngajitime.ui.layar.login.LayarLogin // <-- Pastikan Import Login ada
+import com.example.ngajitime.ui.layar.login.LayarLogin
 import com.example.ngajitime.ui.layar.sesi.LayarInputHasil
 import com.example.ngajitime.ui.layar.sesi.LayarTimer
 import com.example.ngajitime.ui.layar.listsurah.LayarListSurah
@@ -17,20 +17,26 @@ import com.example.ngajitime.ui.layar.profil.LayarProfil
 
 @Composable
 fun NgajiNavGraph(
-    // Parameter ini penting agar MainActivity bisa mengirim hasil cek user
     navController: NavHostController = rememberNavController(),
     startDestination: String = Rute.LOGIN
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination // Gunakan variabel dinamis ini
+        startDestination = startDestination
     ) {
 
-        // --- 1. RUTE LOGIN (PINTU GERBANG BARU) ---
+        // --- 1. RUTE LOGIN ---
         composable(Rute.LOGIN) {
             LayarLogin(
+                // Pintu 1: User Baru selesai setup -> Masuk Beranda
                 onMasuk = {
-                    // Logika: Setelah Login sukses, masuk Beranda & Hapus Login dari riwayat
+                    navController.navigate(Rute.BERANDA) {
+                        popUpTo(Rute.LOGIN) { inclusive = true }
+                    }
+                },
+
+                // Pintu 2 (BARU): User Lama terdeteksi -> Langsung Masuk Beranda
+                onLoginSuccess = {
                     navController.navigate(Rute.BERANDA) {
                         popUpTo(Rute.LOGIN) { inclusive = true }
                     }
@@ -38,15 +44,14 @@ fun NgajiNavGraph(
             )
         }
 
-        // --- 2. RUTE BERANDA (Dashboard) ---
+        // --- 2. RUTE BERANDA ---
         composable(Rute.BERANDA) {
             LayarBeranda(
                 onKeSurah = { navController.navigate(Rute.LIST_SURAH) },
                 onKeStats = { navController.navigate(Rute.STATS) },
                 onKeProfil = { navController.navigate(Rute.PROFIL) },
-                onKeTimer = {
-                    navController.navigate(Rute.TIMER)
-                }
+                // Sambungkan Tombol Hijau ke Layar Timer
+                onKeTimer = { navController.navigate(Rute.TIMER) }
             )
         }
 
@@ -56,20 +61,19 @@ fun NgajiNavGraph(
                 onKeBeranda = { navController.navigate(Rute.BERANDA) },
                 onKeStats = { navController.navigate(Rute.STATS) },
                 onKeProfil = { navController.navigate(Rute.PROFIL) },
-                onKlikSurah = { namaSurah ->
-                    // Nanti kita arahkan ke detail baca
-                }
+                onKlikSurah = { /* Nanti untuk detail bacaan */ }
             )
         }
 
-        // --- 4. RUTE TIMER (Focus Mode) ---
+        // --- 4. RUTE TIMER (FOCUS MODE) ⏱️ ---
         composable(Rute.TIMER) {
             LayarTimer(
+                // Saat timer selesai, kita terima durasi (Long)
                 onSelesai = { durasiDetik ->
-                    // Saat timer selesai, pindah ke Input bawa data durasi
+                    // Pindah ke layar Input Hasil membawa data durasi
                     navController.navigate(Rute.inputHasil(durasiDetik)) {
-                        // Hapus history timer agar user gak bisa back ke timer
-                        popUpTo(Rute.BERANDA) { inclusive = false }
+                        // Hapus Layar Timer dari backstack agar user tidak bisa kembali ke timer yang sudah 0
+                        popUpTo(Rute.TIMER) { inclusive = true }
                     }
                 },
                 onBatal = {
@@ -90,7 +94,6 @@ fun NgajiNavGraph(
         // --- 6. RUTE PROFIL ---
         composable(Rute.PROFIL) {
             LayarProfil(
-                // Navigasi Bottom Bar
                 onKeBeranda = {
                     navController.navigate(Rute.BERANDA) {
                         popUpTo(navController.graph.startDestinationId)
@@ -109,28 +112,28 @@ fun NgajiNavGraph(
                         launchSingleTop = true
                     }
                 },
-                // Logika Logout (Reset ke Halaman Awal)
                 onLogout = {
-                    navController.navigate(Rute.INTRO) { // Atau Rute.LOGIN
-                        popUpTo(0) { inclusive = true } // Hapus semua riwayat backstack
+                    navController.navigate(Rute.LOGIN) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        // --- 7. RUTE INPUT HASIL (Lapor) ---
+        // --- 7. RUTE INPUT HASIL (INTEGRASI) ✅ ---
         composable(
             route = Rute.INPUT_HASIL,
             arguments = listOf(navArgument("durasi") { type = NavType.LongType })
         ) { backStackEntry ->
-            // Ambil data durasi dari kiriman Timer
+            // Tangkap data durasi yang dikirim dari Timer
             val durasi = backStackEntry.arguments?.getLong("durasi") ?: 0L
 
             LayarInputHasil(
                 durasiDetik = durasi,
                 onSelesaiSimpan = {
-                    // Setelah simpan, balik ke Beranda dan hapus semua tumpukan layar sebelumnya
+                    // Setelah simpan sukses, Kembali ke Beranda & Refresh
                     navController.navigate(Rute.BERANDA) {
+                        // Hapus history agar user tidak bisa back ke form input
                         popUpTo(Rute.BERANDA) { inclusive = true }
                     }
                 }

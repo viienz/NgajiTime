@@ -29,17 +29,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.ngajitime.R // Pastikan Import R ini ada
+import com.example.ngajitime.R
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
+import com.example.ngajitime.util.GoogleAuthClient
 
 @Composable
 fun LayarLogin(
     viewModel: LoginViewModel = hiltViewModel(),
-    onMasuk: () -> Unit
+    onMasuk: () -> Unit,       // Callback saat User Baru selesai setup (Step 5)
+    onLoginSuccess: () -> Unit // Callback saat User Lama terdeteksi (Step 99 -> Home)
 ) {
+    // Ambil state step dari ViewModel
     val currentStep by viewModel.step.collectAsState()
 
     // --- 1. TEKNIK BACKGROUND GRADIENT (Agar Tidak Flat) ---
-    // Kita buat warna gradasi dari Hijau Muda (Atas) ke Putih (Bawah)
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
             Color(0xFFE8F5E9), // Hijau sangat muda (Top)
@@ -48,35 +55,55 @@ fun LayarLogin(
         )
     )
 
+    // --- 2. LOGIKA PINDAH HALAMAN OTOMATIS (SINKRONISASI) ---
+    // Jika Step berubah jadi 99 (Kode User Lama), langsung pindah ke Home
+    LaunchedEffect(currentStep) {
+        if (currentStep == 99) {
+            onLoginSuccess()
+        }
+    }
+
     Scaffold(
-        // Ganti containerColor jadi transparan agar gradasi di bawahnya terlihat
         containerColor = Color.Transparent,
         bottomBar = {
-            // Navigasi Bawah
-            NavigasiBawah(currentStep = currentStep, onBack = { viewModel.prevStep() })
+            // Tampilkan Navigasi Bawah HANYA jika bukan sedang Loading (Step 99)
+            if (currentStep < 99) {
+                NavigasiBawah(currentStep = currentStep, onBack = { viewModel.prevStep() })
+            }
         }
     ) { padding ->
         // Box ini menjadi wadah background gradasi
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush) // <--- PASANG GRADASI DISINI
+                .background(backgroundBrush)
                 .padding(padding)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()) // Agar bisa discroll di HP kecil
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                // SWITCH HALAMAN
-                when (currentStep) {
-                    1 -> StepSatuIntro(viewModel)
-                    2 -> StepDuaFrekuensi(viewModel)
-                    3 -> StepTigaLevel(viewModel)
-                    4 -> StepEmpatTujuan(viewModel)
-                    5 -> StepLimaTarget(viewModel, onMasuk)
+            // Logika Tampilan Utama
+            if (currentStep == 99) {
+                // TAMPILAN LOADING (Saat Cek Data User Lama)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF2E7D32))
+                }
+            } else {
+                // TAMPILAN FORM WIZARD (User Baru)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    when (currentStep) {
+                        1 -> StepSatuIntro(viewModel)
+                        2 -> StepDuaFrekuensi(viewModel)
+                        3 -> StepTigaLevel(viewModel)
+                        4 -> StepEmpatTujuan(viewModel)
+                        5 -> StepLimaTarget(viewModel, onMasuk)
+                    }
                 }
             }
         }
@@ -124,7 +151,25 @@ fun NavigasiBawah(currentStep: Int, onBack: () -> Unit) {
 @Composable
 fun StepSatuIntro(viewModel: LoginViewModel) {
     var namaInput by remember { mutableStateOf(viewModel.namaUser) }
+
+    // Persiapan Alat Login Google
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Inisialisasi GoogleAuthClient
+    val googleAuthClient = remember { GoogleAuthClient(context) }
+
+    // Launcher: Ini yang menangani hasil setelah user memilih akun Google
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            scope.launch {
+                val signInResult = googleAuthClient.signInWithIntent(result.data ?: return@launch)
+                viewModel.onSignInResult(signInResult) // Kirim hasil ke ViewModel
+            }
+        }
+    }
 
     Column {
         Text("Assalamualaikum,", fontSize = 20.sp, color = Color.Gray)
@@ -134,7 +179,7 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Input Nama
+        // Input Nama Manual
         Text("Siapa nama panggilanmu?", fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = namaInput,
@@ -145,7 +190,7 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White, // Putih agar bersih
+                unfocusedContainerColor = Color.White,
                 focusedBorderColor = Color(0xFF2E7D32)
             ),
             shape = RoundedCornerShape(12.dp)
@@ -153,14 +198,14 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Tombol Lanjut (Utama)
+        // Tombol Lanjut (Manual)
         Button(
             onClick = { viewModel.nextStep() },
             enabled = namaInput.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
             shape = RoundedCornerShape(12.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp) // Efek bayangan
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
             Text("Lanjut sebagai Tamu", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(modifier = Modifier.width(8.dp))
@@ -178,10 +223,22 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- TOMBOL GOOGLE (BARU!) ---
+        // --- TOMBOL GOOGLE (SUDAH AKTIF SEKARANG! 🚀) ---
         OutlinedButton(
             onClick = {
-                Toast.makeText(context, "Fitur Cloud Sync segera hadir!", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                    // 1. Mulai proses login, dapatkan IntentSender
+                    val signInIntentSender = googleAuthClient.signIn()
+
+                    // 2. Luncurkan Popup Pilih Akun
+                    if (signInIntentSender != null) {
+                        launcher.launch(
+                            IntentSenderRequest.Builder(signInIntentSender).build()
+                        )
+                    } else {
+                        Toast.makeText(context, "Gagal memulai Login Google", Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = RoundedCornerShape(12.dp),
@@ -191,9 +248,8 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
                 contentColor = Color.Black
             )
         ) {
-            // LANGSUNG GAMBAR SAJA (TANPA TRY-CATCH)
             Image(
-                painter = painterResource(id = R.drawable.ic_google),
+                painter = painterResource(id = R.drawable.ic_google), // Pastikan punya icon ini atau ganti icon lain
                 contentDescription = null,
                 modifier = Modifier.size(24.dp)
             )

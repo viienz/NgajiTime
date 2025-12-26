@@ -9,20 +9,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TargetDao {
-    // Perhatikan: FROM target_user (Bukan tabel_target_user)
     @Query("SELECT * FROM target_user LIMIT 1")
     fun getUserTarget(): Flow<TargetUser?>
+
+    @Query("SELECT * FROM target_user LIMIT 1")
+    suspend fun getUserTargetOneShot(): TargetUser?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveTarget(user: TargetUser)
-    @Query("UPDATE target_user SET currentStreak = :streak, lastStreakDate = :date WHERE id = 1")
-    suspend fun updateStreak(streak: Int, date: Long)
-    @Query("UPDATE target_user SET totalAyatDibaca = totalAyatDibaca + :ayat WHERE id = 1")
-    suspend fun addProgressAyat(ayat: Int)
+
+    // [OPSI 1] Hapus user (Nama lama)
     @Query("DELETE FROM target_user")
     suspend fun deleteUser()
-    @Query("UPDATE target_user SET isStreakFreeze = :isActive WHERE id = 0")
-    suspend fun updateStreakFreeze(isActive: Boolean)
 
-
-
+    // [OPSI 2 - BARU] Hapus Total (Nama standar 'Nuke' biar sama dg Repository)
+    @Query("DELETE FROM target_user")
+    suspend fun nukeTable()
 }

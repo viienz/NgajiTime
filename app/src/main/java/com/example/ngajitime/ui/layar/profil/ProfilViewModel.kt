@@ -20,7 +20,10 @@ class ProfilViewModel @Inject constructor(
 
     fun logout(onLogoutSukses: () -> Unit) {
         viewModelScope.launch {
-            repository.hapusUser()
+            // GANTI 'repository.hapusUser()' MENJADI INI:
+            repository.clearAllLocalData()
+
+            // Panggil callback agar UI tahu proses hapus data sudah selesai
             onLogoutSukses()
         }
     }
@@ -56,7 +59,7 @@ class ProfilViewModel @Inject constructor(
         }
     }
 
-    // 4. [BARU] FUNGSI STREAK FREEZE ❄️
+    // STREAK FREEZE
     fun toggleStreakFreeze(isAktif: Boolean) {
         // 1. Ambil data user yang sedang tampil di layar
         val currentUser = userTarget.value ?: return
@@ -66,6 +69,17 @@ class ProfilViewModel @Inject constructor(
             // 3. Lalu Simpan ulang (Menimpa data lama dengan ID yang sama)
             repository.saveTarget(
                 currentUser.copy(isStreakFreeze = isAktif)
+            )
+        }
+    }
+
+    //Edit nama
+    fun updateNama(namaBaru: String) {
+        val currentUser = userTarget.value ?: return
+        viewModelScope.launch {
+            // Copy data user saat ini, tapi ganti namanya saja
+            repository.saveTarget(
+                currentUser.copy(namaUser = namaBaru)
             )
         }
     }

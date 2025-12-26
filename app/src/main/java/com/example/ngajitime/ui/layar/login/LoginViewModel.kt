@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.ngajitime.util.SignInResult
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -81,6 +84,35 @@ class LoginViewModel @Inject constructor(
             // 4. Simpan
             repository.saveTarget(userBaru)
             onSukses()
+        }
+    }
+
+    fun onSignInResult(result: SignInResult) {
+        result.data?.let { user ->
+            // Jangan langsung set nama/email disini
+
+            // Jalankan pengecekan di background
+            viewModelScope.launch {
+                // 1. Cek ke Repository: "Ini orang lama atau baru?"
+                val isUserLama = repository.cekUserLamaDanSimpan(user.userId)
+
+                if (isUserLama) {
+                    // --- SKENARIO A: USER LAMA ---
+                    // Data sudah didownload repository dan disimpan ke Room.
+                    // Langsung lompat ke Selesai (Step terakhir/Home)
+                    // Kita set ke angka 99 (kode rahasia untuk "Login Beres")
+                    _step.value = 99
+
+                } else {
+                    // --- SKENARIO B: USER BARU ---
+                    // Siapkan data untuk form personalisasi
+                    namaUser = user.username ?: "User"
+                    emailUser = user.email
+
+                    // Arahkan ke Step 2 (Personalisasi)
+                    _step.value = 2
+                }
+            }
         }
     }
 }

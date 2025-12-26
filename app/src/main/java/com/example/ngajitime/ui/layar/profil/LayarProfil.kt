@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Person
@@ -43,6 +42,7 @@ fun LayarProfil(
 ) {
     val user by viewModel.userTarget.collectAsState()
     var showDialogTarget by remember { mutableStateOf(false) }
+    var showDialogNama by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Scaffold(
@@ -74,9 +74,40 @@ fun LayarProfil(
             ) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(60.dp))
             }
+
             Spacer(modifier = Modifier.height(16.dp))
-            Text(user?.namaUser ?: "Sobat Ngaji", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(if (user?.email != null) "${user?.email}" else "Mode Tamu (Offline)", fontSize = 14.sp, color = Color.Gray)
+
+            // --- HEADER NAMA BARU (RAPH & BERSIH) ---
+
+            // Row agar Nama dan Ikon sejajar ke samping
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { showDialogNama = true }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = user?.namaUser ?: "Sobat Ngaji",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit Nama",
+                    tint = Color(0xFF2E7D32), // Hijau biar cantik
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Teks Status (Mode Tamu / Email) ditaruh DI BAWAH Row nama
+            Text(
+                text = if (user?.email != null) "${user?.email}" else "Mode Tamu (Offline)",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -109,7 +140,7 @@ fun LayarProfil(
                 icon = Icons.Outlined.AcUnit,
                 judul = "Mode Cuti (Streak Freeze)",
                 desc = "Streak tidak hilang saat absen",
-                isChecked = user?.isStreakFreeze ?: false, // Pastikan kolom ini ada di Entity
+                isChecked = user?.isStreakFreeze ?: false,
                 onCheckedChange = { viewModel.toggleStreakFreeze(it) }
             )
 
@@ -161,9 +192,53 @@ fun LayarProfil(
             }
         )
     }
+
+    if (showDialogNama) {
+        DialogEditNama(
+            namaAwal = user?.namaUser ?: "",
+            onDismiss = { showDialogNama = false },
+            onSimpan = { namaBaru ->
+                viewModel.updateNama(namaBaru)
+                showDialogNama = false
+            }
+        )
+    }
 }
 
-// --- KOMPONEN SWITCH BARU ---
+@Composable
+fun DialogEditNama(
+    namaAwal: String,
+    onDismiss: () -> Unit,
+    onSimpan: (String) -> Unit
+) {
+    var inputNama by remember { mutableStateOf(namaAwal) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ganti Nama Panggilan") },
+        text = {
+            OutlinedTextField(
+                value = inputNama,
+                onValueChange = { if (it.length <= 20) inputNama = it },
+                label = { Text("Nama Kamu") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (inputNama.isNotBlank()) onSimpan(inputNama)
+                }
+            ) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Batal") }
+        }
+    )
+}
+
 @Composable
 fun ItemSwitch(
     icon: ImageVector,
@@ -194,7 +269,6 @@ fun ItemSwitch(
     }
 }
 
-// --- Komponen Dialog (Wajib disertakan agar tidak eror) ---
 @Composable
 fun DialogEditTarget(currentMode: String, currentValue: Int, onDismiss: () -> Unit, onSimpan: (String, Int) -> Unit) {
     var selectedMode by remember { mutableStateOf(currentMode) }

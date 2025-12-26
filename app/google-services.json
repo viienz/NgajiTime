@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "557527586392",
+    "project_id": "ngajitime-d14a7",
+    "storage_bucket": "ngajitime-d14a7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:557527586392:android:44e2ca1a466e136a665c2d",
+        "android_client_info": {
+          "package_name": "com.example.ngajitime"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "557527586392-411241629plpk776nn15l2quvd5abmi3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ngajitime",
+            "certificate_hash": "0a8bbba160a03f11a0c9b77cf6b6ae2cd2e92d29"
+          }
+        },
+        {
+          "client_id": "557527586392-dedr7761qae24mpl5lnhgcjhv6hs9ji6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBml-kcYgIyZGNfjeZqNSDzayoOxu0t3g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "557527586392-dedr7761qae24mpl5lnhgcjhv6hs9ji6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

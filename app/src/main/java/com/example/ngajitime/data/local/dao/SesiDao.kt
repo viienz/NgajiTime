@@ -13,17 +13,19 @@ interface SesiDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSesi(sesi: SesiNgaji)
 
-    // 2. Ambil Semua History (Reactive Flow untuk UI)
+    // 2. Ambil Semua History
     @Query("SELECT * FROM tabel_sesi_ngaji ORDER BY tanggalSesi DESC")
     fun getAllSesi(): Flow<List<SesiNgaji>>
 
-    // 3. FITUR UTAMA: Ambil Total Halaman Hari Ini (Untuk Progress Bar Beranda)
+    // 3. Ambil Total Halaman Hari Ini
     @Query("SELECT SUM(halamanSelesai) FROM tabel_sesi_ngaji WHERE tanggalSesi BETWEEN :startOfDay AND :endOfDay")
     fun getTotalHalamanHariIni(startOfDay: Long, endOfDay: Long): Flow<Int?>
-    // Return nullable Int karena kalau belum baca hasilnya null
 
-    // 4. SMART ESTIMATION: Hitung Rata-Rata Kecepatan User (Detik per Halaman)
-    // Rumus: Total Durasi Seluruhnya / Total Halaman Seluruhnya
+    // 4. Hitung Rata-Rata Kecepatan
     @Query("SELECT (SUM(durasiDetik) / SUM(halamanSelesai)) FROM tabel_sesi_ngaji WHERE halamanSelesai > 0")
     suspend fun getAverageSecondsPerPage(): Long?
+
+    // [BARU] HAPUS SEMUA RIWAYAT (Untuk Logout)
+    @Query("DELETE FROM tabel_sesi_ngaji")
+    suspend fun nukeTable()
 }
