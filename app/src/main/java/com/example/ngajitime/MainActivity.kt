@@ -36,11 +36,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // State untuk menyimpan mau ke mana (Login atau Beranda?)
-                    // Awalnya kosong ("") karena kita belum tahu
                     var startScreen by remember { mutableStateOf("") }
 
-                    // Cek Database di Background (Aman, tidak bikin crash)
                     LaunchedEffect(Unit) {
                         val user = repository.getUserTarget().firstOrNull()
                         if (user != null) {
@@ -50,12 +47,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Logika Tampilan:
                     if (startScreen.isNotEmpty()) {
-                        // 1. Kalau sudah tahu tujuannya -> Buka Navigasi
                         NgajiNavGraph(startDestination = startScreen)
                     } else {
-                        // 2. Kalau belum tahu (lagi loading) -> Tampilkan Loading Putar
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center

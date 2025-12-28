@@ -22,7 +22,6 @@ fun DialogUpdateSurah(
     onDismiss: () -> Unit,
     onSimpan: (Int) -> Unit
 ) {
-    // State untuk menampung input user (default: ayat terakhir yg tersimpan)
     var inputAyat by remember { mutableStateOf(surah.ayatTerakhirDibaca.toString()) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -36,7 +35,6 @@ fun DialogUpdateSurah(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Judul Dialog
                 Text(
                     text = "Update Progress",
                     style = MaterialTheme.typography.titleMedium,
@@ -54,13 +52,11 @@ fun DialogUpdateSurah(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Input Angka
                 Text("Sampai ayat berapa?", fontSize = 14.sp)
 
                 OutlinedTextField(
                     value = inputAyat,
                     onValueChange = { newValue ->
-                        // Hanya terima angka
                         if (newValue.all { it.isDigit() }) {
                             inputAyat = newValue
                         }
@@ -88,7 +84,6 @@ fun DialogUpdateSurah(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Tombol Aksi
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly

@@ -64,7 +64,6 @@ fun LayarStats(
         containerColor = Color(0xFFF5F5F5)
     ) { padding ->
 
-        // --- MENGGUNAKAN LAZY VERTICAL GRID UNTUK SELURUH HALAMAN ---
         LazyVerticalGrid(
             columns = GridCells.Fixed(2), // 2 Kolom
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -78,7 +77,6 @@ fun LayarStats(
             modifier = Modifier.padding(top = padding.calculateTopPadding())
         ) {
 
-            // ITEM 1: JUDUL & RINGKASAN PIALA (Full Width)
             item(span = { GridItemSpan(2) }) {
                 Column {
                     Text(
@@ -89,7 +87,6 @@ fun LayarStats(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Kartu Ringkasan Progres
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -115,7 +112,6 @@ fun LayarStats(
                 }
             }
 
-            // ITEM 2: GRAFIK MINGGUAN (Full Width)
             item(span = { GridItemSpan(2) }) {
                 Card(
                     modifier = Modifier.fillMaxWidth().height(380.dp),
@@ -124,7 +120,6 @@ fun LayarStats(
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        // Header Grafik (Navigasi)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -138,7 +133,6 @@ fun LayarStats(
                                     Text("$totalMingguIni Ayat", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                                 }
                             }
-                            // Tombol Navigasi
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { viewModel.geserMinggu(-1) }) {
                                     Icon(Icons.Default.ChevronLeft, contentDescription = "Mundur")
@@ -152,7 +146,6 @@ fun LayarStats(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Visualisasi Grafik Batang
                         Row(
                             modifier = Modifier.fillMaxSize(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -181,7 +174,6 @@ fun LayarStats(
                 }
             }
 
-            // ITEM 3: JUDUL GRID PIALA (Full Width)
             item(span = { GridItemSpan(2) }) {
                 Text(
                     "Daftar Piala",
@@ -191,7 +183,6 @@ fun LayarStats(
                 )
             }
 
-            // ITEM 4: LOOPING GRID PIALA (Otomatis 2 Kolom)
             items(listPiala) { piala ->
                 ItemPiala(piala = piala)
             }
@@ -199,7 +190,6 @@ fun LayarStats(
     }
 }
 
-// KOMPONEN ITEM PIALA (Baru & Cantik)
 @Composable
 fun ItemPiala(piala: Piala) {
     val containerColor = if (piala.isUnlocked) Color.White else Color(0xFFEEEEEE)

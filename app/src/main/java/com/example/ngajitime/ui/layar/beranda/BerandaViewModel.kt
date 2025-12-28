@@ -19,12 +19,11 @@ import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
-// DATA CLASS UNTUK UI KALENDER 📅
 data class KalenderItemData(
-    val hari: String,    // "Sen", "Sel"
-    val tanggal: String, // "02", "03"
-    val isAdaSesi: Boolean, // True = Pernah ngaji hari itu (Hijau)
-    val isHariIni: Boolean  // True = Hari ini (Teks Bold/Hitam)
+    val hari: String,
+    val tanggal: String,
+    val isAdaSesi: Boolean,
+    val isHariIni: Boolean
 )
 
 @HiltViewModel
@@ -33,7 +32,7 @@ class BerandaViewModel @Inject constructor(
     private val estimasiWaktuUseCase: EstimasiWaktuUseCase
 ) : ViewModel() {
 
-    // 1. DATA USER ✅
+    //DATA USER
     val userTarget: StateFlow<TargetUser?> = repository.getUserTarget()
         .stateIn(
             scope = viewModelScope,
@@ -41,11 +40,10 @@ class BerandaViewModel @Inject constructor(
             initialValue = null
         )
 
-    // 2. PROGRESS HARIAN ✅
+    //PROGRESS HARIAN
     private val _halamanHariIni = MutableStateFlow(0)
     val halamanHariIni: StateFlow<Int> = _halamanHariIni
 
-    // Persentase Progress Lingkaran
     val progressPersen: StateFlow<Int> = combine(_halamanHariIni, userTarget) { totalAyatHariIni, user ->
         if (user == null || user.targetAyatHarian == 0) {
             0
@@ -56,33 +54,27 @@ class BerandaViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
 
-    // 3. LAST READ (TERAKHIR DIBACA) ✅
+    //TERAKHIR DIBACA
     val lastRead: StateFlow<SurahProgress?> = repository.allSurah // <--- Ganti ini (Hapus getAllSurahProgress())
         .combine(MutableStateFlow(true)) { list, _ ->
             list.maxByOrNull { it.lastUpdated }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-
-    // 4. [BARU] LOGIKA KALENDER MINGGUAN PINTAR 📅 ✨
-    // Otomatis mendeteksi riwayat ngaji minggu ini
+    //mendeteksi riwayat ngaji minggu ini
     val listKalender: StateFlow<List<KalenderItemData>> = repository.allRiwayatSesi
         .map { listSesi ->
             val calendar = Calendar.getInstance()
             val todayDayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
             val todayYear = calendar.get(Calendar.YEAR)
 
-            // Set Kalender ke Awal Minggu (Mulai dari HARI MINGGU)
-            // Kalau mau mulai Senin, ganti Calendar.SUNDAY jadi Calendar.MONDAY
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
 
             val hasilList = mutableListOf<KalenderItemData>()
             val formatHari = SimpleDateFormat("EEE", Locale("id", "ID")) // "Min", "Sen"
             val formatTanggal = SimpleDateFormat("dd", Locale("id", "ID")) // "21"
 
-            // Loop 7 hari ke depan (Minggu s/d Sabtu)
             for (i in 0..6) {
-                // 1. Tentukan Start & End hari tersebut
                 val calStart = calendar.clone() as Calendar
                 calStart.set(Calendar.HOUR_OF_DAY, 0)
                 calStart.set(Calendar.MINUTE, 0)
@@ -96,15 +88,13 @@ class BerandaViewModel @Inject constructor(
                 calEnd.set(Calendar.SECOND, 59)
                 val endMillis = calEnd.timeInMillis
 
-                // 2. Cek Database: Ada gak sesi ngaji di rentang waktu ini?
-                // Kita pakai listSesi yang diambil dari Repository
+
                 val adaSesi = listSesi.any { it.tanggalSesi in startMillis..endMillis }
 
-                // 3. Cek Hari Ini
+
                 val isToday = (calendar.get(Calendar.DAY_OF_YEAR) == todayDayOfYear) &&
                         (calendar.get(Calendar.YEAR) == todayYear)
 
-                // 4. Masukkan ke List
                 hasilList.add(
                     KalenderItemData(
                         hari = formatHari.format(calendar.time),
@@ -114,7 +104,6 @@ class BerandaViewModel @Inject constructor(
                     )
                 )
 
-                // Geser tanggal ke besok untuk loop berikutnya
                 calendar.add(Calendar.DAY_OF_YEAR, 1)
             }
             hasilList

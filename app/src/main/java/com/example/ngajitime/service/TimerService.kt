@@ -17,10 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class TimerService : Service() {
-
-    // Singleton untuk akses data dari ViewModel
     companion object {
-        private val _waktuTersisa = MutableStateFlow(0L) // Dalam Detik
+        private val _waktuTersisa = MutableStateFlow(0L)
         val waktuTersisa: StateFlow<Long> = _waktuTersisa
 
         private val _statusTimer = MutableStateFlow(TimerStatus.IDLE)
@@ -46,35 +44,30 @@ class TimerService : Service() {
             }
             ACTION_STOP -> {
                 hentikanTimer()
-                stopSelf() // Matikan service
+                stopSelf()
             }
         }
         return START_STICKY
     }
 
     private fun mulaiCountdown(durasiDetik: Long) {
-        hentikanTimer() // Reset jika ada yg jalan
+        hentikanTimer()
         totalDurasiAwal = durasiDetik
         _statusTimer.value = TimerStatus.RUNNING
 
-        // Buat Notifikasi Foreground (Wajib biar gak dibunuh Android)
         startForeground(1, buatNotifikasi("Fokus Mengaji Dimulai", "Waktu tersisa: ${formatWaktu(durasiDetik)}").build())
 
-        // Timer Android (Millis)
         countdownTimer = object : CountDownTimer(durasiDetik * 1000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val detikSisa = millisUntilFinished / 1000
                 _waktuTersisa.value = detikSisa
-
-                // Update Notifikasi tiap detik (Opsional: Bisa bikin boros batre, jadi update tiap menit aja kalau mau hemat)
-                // updateNotifikasi(detikSisa)
             }
 
             override fun onFinish() {
                 _waktuTersisa.value = 0
                 _statusTimer.value = TimerStatus.FINISHED
                 bunyikanAlarmSelesai()
-                stopForeground(STOP_FOREGROUND_DETACH) // Hapus notifikasi sticky
+                stopForeground(STOP_FOREGROUND_DETACH)
             }
         }.start()
     }
@@ -85,7 +78,6 @@ class TimerService : Service() {
     }
 
     private fun bunyikanAlarmSelesai() {
-        // Bunyikan Suara Notifikasi Default HP
         try {
             val notifikasi = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val r = RingtoneManager.getRingtone(applicationContext, notifikasi)
@@ -94,32 +86,30 @@ class TimerService : Service() {
             e.printStackTrace()
         }
 
-        // Tampilkan Notifikasi "Selesai"
         val notifManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notifManager.notify(2, buatNotifikasi("Alhamdulillah Selesai! 🎉", "Target waktu tercapai.").build())
     }
 
-    // --- UTILS NOTIFIKASI ---
+
     private fun buatNotifikasi(judul: String, isi: String): NotificationCompat.Builder {
         val channelId = "timer_channel"
         val notifManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Buat Channel (Android 8+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, "Timer Ngaji", NotificationManager.IMPORTANCE_LOW)
             notifManager.createNotificationChannel(channel)
         }
 
-        // Intent kalau notifikasi diklik -> Buka Aplikasi
+
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle(judul)
             .setContentText(isi)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Ganti ikon sesuai aset kamu
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
-            .setOngoing(true) // Gak bisa diswipe user
+            .setOngoing(true)
     }
 
     private fun formatWaktu(detik: Long): String {

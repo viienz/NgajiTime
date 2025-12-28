@@ -32,31 +32,26 @@ fun LayarInputHasil(
 ) {
     val listSurah by viewModel.listSurah.collectAsState()
 
-    // State Form
     var selectedSurah by remember { mutableStateOf<SurahProgress?>(null) }
     var inputAyat by remember { mutableStateOf("") }
     var showDialogPilihSurah by remember { mutableStateOf(false) }
 
-    // Hitung Estimasi Ayat yang dibaca (Visual Saja)
     val ayatAwal = selectedSurah?.ayatTerakhirDibaca ?: 0
     val ayatAkhir = inputAyat.toIntOrNull() ?: ayatAwal
     val selisih = (ayatAkhir - ayatAwal).coerceAtLeast(0)
 
-    // --- UI DIALOG PILIH SURAH ---
     if (showDialogPilihSurah) {
         DialogPilihSurah(
             listData = listSurah,
             onDismiss = { showDialogPilihSurah = false },
             onPilih = { surah ->
                 selectedSurah = surah
-                // Otomatis isi input dengan ayat terakhir + 1 (Saran)
                 inputAyat = (surah.ayatTerakhirDibaca + 1).coerceAtMost(surah.totalAyat).toString()
                 showDialogPilihSurah = false
             }
         )
     }
 
-    // --- UI UTAMA ---
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -69,7 +64,6 @@ fun LayarInputHasil(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 1. PILIH SURAH (DROPDOWN CLICKABLE)
         Text("Surah yang dibaca:", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -99,7 +93,6 @@ fun LayarInputHasil(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 2. INPUT AYAT TERAKHIR
         if (selectedSurah != null) {
             Text("Sampai Ayat Berapa?", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
@@ -120,7 +113,6 @@ fun LayarInputHasil(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // 3. TOMBOL SIMPAN
         Button(
             onClick = {
                 if (selectedSurah != null) {
@@ -132,9 +124,7 @@ fun LayarInputHasil(
                         onSimpanSukses = onSelesaiSimpan
                     )
                 } else {
-                    // Jika tidak pilih surah (misal cuma mau log waktu saja)
-                    // Kita bisa handle logic lain, tapi untuk sekarang kita paksa pilih surah
-                    // Atau buat Dummy Surah jika perlu.
+
                 }
             },
             enabled = selectedSurah != null && inputAyat.isNotEmpty(),
@@ -148,7 +138,6 @@ fun LayarInputHasil(
     }
 }
 
-// --- DIALOG PENCARIAN SURAH ---
 @Composable
 fun DialogPilihSurah(
     listData: List<SurahProgress>,
@@ -171,7 +160,7 @@ fun DialogPilihSurah(
                 Text("Pilih Surah", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Search Bar Kecil
+                // Search Bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },

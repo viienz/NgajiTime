@@ -10,12 +10,12 @@ import com.example.ngajitime.data.local.entity.SurahProgress
 import com.example.ngajitime.data.local.entity.TargetUser
 
 @Database(
-    entities = [SesiNgaji::class, TargetUser::class, SurahProgress::class], // <-- Tambah SurahProgress
-    version = 3, // <-- WAJIB: Naikkan jadi 2 karena struktur berubah
+    entities = [SesiNgaji::class, TargetUser::class, SurahProgress::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sesiDao(): SesiDao
     abstract fun targetDao(): TargetDao
-    abstract fun surahDao(): SurahDao // <-- Tambah ini
+    abstract fun surahDao(): SurahDao
 }

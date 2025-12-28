@@ -27,9 +27,6 @@ class NgajiRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) {
-    // =========================================================
-    // 1. DATA FLOW & DASAR
-    // =========================================================
     val allSurah: Flow<List<SurahProgress>> = surahDao.getAllSurah()
     val allRiwayatSesi: Flow<List<SesiNgaji>> = sesiDao.getAllSesi()
 
@@ -38,10 +35,6 @@ class NgajiRepository @Inject constructor(
     suspend fun getUserTargetOneShot(): TargetUser? {
         return targetDao.getUserTargetOneShot()
     }
-
-    // =========================================================
-    // 2. SINKRONISASI USER (SAVE & UPDATE)
-    // =========================================================
 
     // Simpan Target (Lokal + Cloud)
     suspend fun saveTarget(user: TargetUser) {
@@ -83,18 +76,15 @@ class NgajiRepository @Inject constructor(
         }
     }
 
-    // Alias
     suspend fun addProgressAyat(ayat: Int) = tambahTotalAyat(ayat)
 
-    // =========================================================
-    // 3. PROGRESS SURAH & SESI
-    // =========================================================
 
+    //PROGRESS SURAH & SESI
     suspend fun updateProgressSurah(id: Int, ayat: Int, total: Int) {
         val isKhatam = ayat >= total
         surahDao.updateProgress(id, ayat, System.currentTimeMillis(), isKhatam)
 
-        // Sync Cloud (Bookmark)
+        //Sync Cloud
         val uid = auth.currentUser?.uid
         if (uid != null) {
             val dataBookmark = hashMapOf(
@@ -130,11 +120,7 @@ class NgajiRepository @Inject constructor(
         if (surahDao.getSurahById(1) == null) surahDao.insertAll(DataSurah.list114Surah)
     }
 
-    // =========================================================
-    // 4. FIREBASE HELPER (UPLOAD, CHECK, NUKE) 🔥
-    // =========================================================
-
-    // Upload Helper
+    // Upload Helper (Firebase)
     private suspend fun uploadUserToCloud(user: TargetUser) {
         val uid = auth.currentUser?.uid ?: return
         try {
@@ -143,7 +129,6 @@ class NgajiRepository @Inject constructor(
         } catch (e: Exception) { e.printStackTrace() }
     }
 
-    // [PENTING] Cek User Lama (Dipanggil ViewModel saat Login)
     suspend fun cekUserLamaDanSimpan(uid: String): Boolean {
         return try {
             Log.d("FIREBASE_CEK", "Mulai cek data untuk UID: $uid")
@@ -155,13 +140,8 @@ class NgajiRepository @Inject constructor(
 
                 if (cloudUser != null) {
                     Log.d("FIREBASE_CEK", "Konversi SUKSES: ${cloudUser.namaUser}")
-                    // 1. Simpan Profil Utama
                     targetDao.saveTarget(cloudUser.copy(id = 1))
-
-                    // --- [TAMBAHKAN BARIS INI] ---
-                    // 2. Download Riwayat & Bookmark (Pemicu Full Sync)
                     syncDataFromCloud()
-                    // -----------------------------
 
                     return true
                 } else {
@@ -177,7 +157,6 @@ class NgajiRepository @Inject constructor(
         }
     }
 
-    // [PENTING] Hapus Data Lokal (Dipanggil saat Logout)
     suspend fun clearAllLocalData() {
         targetDao.nukeTable()
         sesiDao.nukeTable()
@@ -189,27 +168,20 @@ class NgajiRepository @Inject constructor(
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // ==========================================
-                // 1. DOWNLOAD PROFIL USER (Target, Streak, Total)
-                // ==========================================
                 val docSnapshot = firestore.collection("users").document(uid).get().await()
                 if (docSnapshot.exists()) {
                     val cloudUser = docSnapshot.toObject(TargetUser::class.java)
                     if (cloudUser != null) {
-                        // Simpan Profil ke HP
                         targetDao.saveTarget(cloudUser.copy(id = 1))
                         Log.d("SYNC_CLOUD", "Profil sukses didownload: ${cloudUser.namaUser}")
                     }
                 } else {
-                    // Jika User Baru di Cloud, upload data lokal
                     val localUser = targetDao.getUserTargetOneShot()
                     if (localUser != null) uploadUserToCloud(localUser)
-                    return@launch // Stop disini kalau user baru
+                    return@launch
                 }
 
-                // ==========================================
-                // 2. DOWNLOAD RIWAYAT SESI (Agar Progress Harian Muncul)
-                // ==========================================
+
                 val sesiSnapshot = firestore.collection("users").document(uid)
                     .collection("riwayat_sesi").get().await()
 
@@ -221,9 +193,7 @@ class NgajiRepository @Inject constructor(
                     Log.d("SYNC_CLOUD", "Riwayat Sesi sukses didownload: ${listSesi.size} data")
                 }
 
-                // ==========================================
-                // 3. DOWNLOAD BOOKMARK SURAH (Agar Last Read Muncul)
-                // ==========================================
+
                 val bookmarkSnapshot = firestore.collection("users").document(uid)
                     .collection("bookmark_surah").get().await()
 

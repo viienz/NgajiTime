@@ -6,9 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "target_user")
 data class TargetUser(
     @PrimaryKey val id: Int = 1,
-
-    // SEMUA field WAJIB punya nilai default (= ...)
-    // Agar Firebase tidak error saat membaca data
+    // --- DATA USER ---
     val namaUser: String = "",
     val email: String? = null,
 
@@ -29,6 +27,6 @@ data class TargetUser(
     val currentStreak: Int = 0,
     val lastStreakDate: Long = 0L
 ) {
-    // Constructor kosong explisit (Untuk keamanan ganda Firebase)
+
     constructor() : this(1, "", null, "", "", "", "PEMULA", "WAKTU", 15, 30, 10, false, 0, 0, 0L)
 }

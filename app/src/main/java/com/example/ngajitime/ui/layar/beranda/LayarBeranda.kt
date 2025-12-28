@@ -34,8 +34,7 @@ import com.example.ngajitime.ui.komponen.NgajiBottomBar
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-// --- WARNA TEMA ---
-val HijauStreak = Color(0xFFAEEA5C) // Lime cerah
+val HijauStreak = Color(0xFFAEEA5C)
 val HijauTombol = Color(0xFF4CAF50)
 val BiruMudaBg = Color(0xFFF0F4F8)
 val GradienBiru1 = Color(0xFF42A5F5)
@@ -49,19 +48,19 @@ fun LayarBeranda(
     onKeProfil: () -> Unit,
     onKeTimer: () -> Unit
 ) {
-    // --- 1. AMBIL DATA REAL-TIME ---
+    //mengambil data real time
     val user by viewModel.userTarget.collectAsState()
     val lastReadData by viewModel.lastRead.collectAsState()
-    val halamanHariIni by viewModel.halamanHariIni.collectAsState() // Ini sebenarnya total ayat hari ini
+    val halamanHariIni by viewModel.halamanHariIni.collectAsState()
     val listKalender by viewModel.listKalender.collectAsState()
 
-    // Variabel Logika Target
+
     val targetAyat = user?.targetAyatHarian ?: 1
     val ayatHariIni = halamanHariIni
     val progressPersen = ((ayatHariIni.toFloat() / targetAyat.toFloat()) * 100).coerceIn(0f, 100f)
     val isTargetReached = ayatHariIni >= targetAyat
 
-    // Variabel UI Lainnya
+
     val namaUser = user?.namaUser ?: "Sobat Ngaji"
     val streakCount = user?.currentStreak ?: 0
     val lastReadSurah = lastReadData?.namaSurah ?: "Belum ada"
@@ -99,47 +98,43 @@ fun LayarBeranda(
                 .fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
-            // A. HEADER SECTION
+
             item {
                 HeaderSection(namaUser = namaUser)
             }
 
-            // B. KONTEN UTAMA
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 1. [BARU] KARTU TARGET HARIAN (BESAR) 🎯
-                    // Posisinya sekarang di atas Streak
+
                     KartuTargetBesar(
                         ayatDibaca = ayatHariIni,
                         targetAyat = targetAyat,
-                        progress = progressPersen / 100f, // Ubah ke float 0.0 - 1.0
+                        progress = progressPersen / 100f,
                         isReached = isTargetReached
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 2. [BARU] ROW: STREAK (KECIL) & STATUS
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Kartu Streak (Kecil, Angka di Tengah)
+
                         KartuStreakKecil(
                             streak = streakCount,
                             modifier = Modifier.weight(1f)
                         )
 
-                        // [UPDATE] Kartu Status -> Total Jejak Ngaji
                         StatusBadgeCard(
-                            totalAyat = user?.totalAyatDibaca ?: 0, // Ambil data dari User
+                            totalAyat = user?.totalAyatDibaca ?: 0,
                             modifier = Modifier.weight(1f)
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 3. Last Read
                     LastReadCard(
                         surah = lastReadSurah,
                         ayat = lastReadAyat,
@@ -148,7 +143,6 @@ fun LayarBeranda(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 4. Tombol Mulai
                     Button(
                         onClick = onKeSurah,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -161,15 +155,12 @@ fun LayarBeranda(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 5. Kalender
                     KalenderMingguanSection(listData = listKalender)
                 }
             }
         }
     }
 }
-
-// ================= KOMPONEN UI BARU & UPDATE =================
 
 @Composable
 fun HeaderSection(namaUser: String) {
@@ -253,7 +244,6 @@ fun HeaderSection(namaUser: String) {
     }
 }
 
-// 🔥 KARTU TARGET HARIAN (SEKARANG BESAR & UTAMA) 🔥
 @Composable
 fun KartuTargetBesar(
     ayatDibaca: Int,
@@ -279,7 +269,6 @@ fun KartuTargetBesar(
                 Text("Target Harian Kamu", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Info Progres (Angka Besar & Persen)
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = "$ayatDibaca / $targetAyat",
@@ -305,7 +294,6 @@ fun KartuTargetBesar(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Progress Bar Linear
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
@@ -318,7 +306,6 @@ fun KartuTargetBesar(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Pesan Motivasi
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         if (isReached) Icons.Rounded.EmojiEvents else Icons.Rounded.LocalFireDepartment,
@@ -339,28 +326,26 @@ fun KartuTargetBesar(
     }
 }
 
-// 🔥 KARTU STREAK KECIL (SEKARANG KECIL, ANGKA DI TENGAH) 🔥
 @Composable
 fun KartuStreakKecil(streak: Int, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.height(140.dp), // Tinggi disamakan dengan kartu status
+        modifier = modifier.height(140.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = HijauStreak) // Warna Hijau Streak
+        colors = CardDefaults.cardColors(containerColor = HijauStreak)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, // Rata Tengah Horizontal
-            verticalArrangement = Arrangement.Center // Rata Tengah Vertikal
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Ikon Api
+
             Icon(
                 imageVector = Icons.Rounded.LocalFireDepartment,
                 contentDescription = "Streak",
-                tint = Color(0xFFFF5722), // Oranye Api
+                tint = Color(0xFFFF5722),
                 modifier = Modifier.size(28.dp)
             )
 
-            // Angka Besar di Tengah
             Text(
                 text = streak.toString(),
                 fontSize = 40.sp, // Sangat Besar
@@ -368,7 +353,6 @@ fun KartuStreakKecil(streak: Int, modifier: Modifier = Modifier) {
                 color = Color(0xFF33691E) // Hijau Tua
             )
 
-            // Label
             Text(
                 text = "Day Streak",
                 fontSize = 12.sp,
@@ -385,7 +369,7 @@ fun StatusBadgeCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.height(140.dp), // Tinggi tetap 140dp
+        modifier = modifier.height(140.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -393,10 +377,9 @@ fun StatusBadgeCard(
         Column(
             modifier = Modifier.padding(16.dp).fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            // [PERBAIKAN] Ubah dari Center ke SpaceEvenly agar tidak terpotong
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            // 1. Ikon Buku (Dalam lingkaran biru muda)
+
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -410,16 +393,12 @@ fun StatusBadgeCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
-
-            // 2. Angka Total Besar
             Text(
                 text = "$totalAyat",
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 28.sp,
                 color = Color(0xFF263238)
             )
-
-            // 3. Label Penjelasan (Sekarang tidak akan terpotong)
             Text(
                 text = "Total Ayat",
                 fontSize = 12.sp,
@@ -459,7 +438,6 @@ fun LastReadCard(surah: String, ayat: Int, info: String) {
 
 @Composable
 fun KalenderMingguanSection(listData: List<KalenderItemData>) {
-    // Ambil bulan tahun dari hari ini (Visual saja)
     val titleBulan = remember {
         val fmt = SimpleDateFormat("MMMM yyyy", java.util.Locale("id", "ID"))
         fmt.format(java.util.Date())
@@ -477,47 +455,39 @@ fun KalenderMingguanSection(listData: List<KalenderItemData>) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Loop data dari ViewModel
             listData.forEach { item ->
                 KalenderItem(
                     hari = item.hari,
                     tanggal = item.tanggal,
-                    isActive = item.isAdaSesi, // Hijau kalau ada sesi
-                    isHariIni = item.isHariIni // Hitam kalau hari ini
+                    isActive = item.isAdaSesi,
+                    isHariIni = item.isHariIni
                 )
             }
 
-            // Fallback (Jaga-jaga kalau data belum load)
             if (listData.isEmpty()) {
                 Text("Memuat kalender...", fontSize = 12.sp, color = Color.Gray)
             }
         }
     }
 }
-
-// [UPDATE ITEM] Tambahkan parameter isHariIni
 @Composable
 fun KalenderItem(hari: String, tanggal: String, isActive: Boolean, isHariIni: Boolean) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            // Warna Hijau kalau Active, Transparan kalau tidak
             .background(if (isActive) HijauStreak else Color.Transparent)
             .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {
-        // Teks Hari
         Text(
             text = hari,
             fontSize = 12.sp,
-            // Kalau hari ini, warnanya Hitam/Bold. Kalau bukan, Abu-abu.
             color = if (isHariIni || isActive) Color(0xFF263238) else Color.Gray,
             fontWeight = if (isHariIni) FontWeight.Bold else FontWeight.Normal
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Teks Tanggal
         Text(
             text = tanggal,
             fontWeight = FontWeight.Bold,

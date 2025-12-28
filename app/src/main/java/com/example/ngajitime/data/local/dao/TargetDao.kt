@@ -18,11 +18,9 @@ interface TargetDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveTarget(user: TargetUser)
 
-    // [OPSI 1] Hapus user (Nama lama)
     @Query("DELETE FROM target_user")
     suspend fun deleteUser()
 
-    // [OPSI 2 - BARU] Hapus Total (Nama standar 'Nuke' biar sama dg Repository)
     @Query("DELETE FROM target_user")
     suspend fun nukeTable()
 }

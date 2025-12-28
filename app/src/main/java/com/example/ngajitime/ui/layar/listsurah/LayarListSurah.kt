@@ -26,11 +26,10 @@ import com.example.ngajitime.ui.komponen.NgajiBottomBar
 @Composable
 fun LayarListSurah(
     viewModel: ListSurahViewModel = hiltViewModel(),
-    // --- PARAMETER NAVIGASI BARU ---
     onKeBeranda: () -> Unit,
     onKeStats: () -> Unit,
     onKeProfil: () -> Unit,
-    // -------------------------------
+
     onKlikSurah: (SurahProgress) -> Unit = {}
 ) {
     val listSurah by viewModel.uiSurahList.collectAsState()
@@ -38,7 +37,6 @@ fun LayarListSurah(
     val surahSelesai = listSurah.count { it.isKhatam }
     var selectedSurah by remember { mutableStateOf<SurahProgress?>(null) }
 
-    // Logika Dialog Update (Tetap Sama)
     if (selectedSurah != null) {
         DialogUpdateSurah(
             surah = selectedSurah!!,
@@ -50,13 +48,12 @@ fun LayarListSurah(
         )
     }
 
-    // --- STRUKTUR BARU DENGAN SCAFFOLD ---
     Scaffold(
         bottomBar = {
             NgajiBottomBar(
-                menuAktif = MenuAktif.SURAH, // Menu Surah Aktif
+                menuAktif = MenuAktif.SURAH,
                 onKeBeranda = onKeBeranda,
-                onKeSurah = {}, // Sedang di sini
+                onKeSurah = {},
                 onKeStats = onKeStats,
                 onKeProfil = onKeProfil
             )
@@ -64,14 +61,13 @@ fun LayarListSurah(
         containerColor = Color(0xFFF5F5F5)
     ) { padding ->
 
-        // Konten Utama (Logika Anda dipindah ke sini)
         Column(
             modifier = Modifier
-                .padding(padding) // Penting! Agar tidak ketutup bottom bar
+                .padding(padding)
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // --- HEADER ---
+            //HEADER
             Text(
                 text = "List Surah",
                 fontSize = 24.sp,
@@ -89,7 +85,7 @@ fun LayarListSurah(
                     .padding(bottom = 16.dp)
             )
 
-            // --- SEARCH BAR ---
+            //SEARCH BAR
             OutlinedTextField(
                 value = query,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -108,16 +104,16 @@ fun LayarListSurah(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- LIST SURAH ---
+            //LIST SURAH
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp) // Padding bawah tambahan
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(listSurah, key = { it.nomorSurah }) { surah ->
                     ItemSurah(
                         surah = surah,
                         onClick = {
-                            selectedSurah = surah // Buka Dialog
+                            selectedSurah = surah
                         }
                     )
                 }
@@ -126,7 +122,6 @@ fun LayarListSurah(
     }
 }
 
-// Komponen ItemSurah (Tetap Sama Persis)
 @Composable
 fun ItemSurah(surah: SurahProgress, onClick: () -> Unit) {
     val progress = if (surah.totalAyat > 0) surah.ayatTerakhirDibaca.toFloat() / surah.totalAyat else 0f

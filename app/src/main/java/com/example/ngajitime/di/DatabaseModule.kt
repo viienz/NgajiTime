@@ -19,7 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    // --- 1. PABRIK DATABASE UTAMA ---
+    //untuk database utama
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -28,13 +28,11 @@ object DatabaseModule {
             AppDatabase::class.java,
             "ngaji_database"
         )
-            // INI OBAT ANTI-CRASH YANG KITA DISKUSIKAN TADI
             .fallbackToDestructiveMigration()
             .build()
     }
 
-    // --- 2. PENYEDIA DAO (ALAT AMBIL DATA) ---
-
+    //untuk ambil data (dao) dari database
     @Provides
     fun provideTargetDao(database: AppDatabase): TargetDao {
         return database.targetDao()

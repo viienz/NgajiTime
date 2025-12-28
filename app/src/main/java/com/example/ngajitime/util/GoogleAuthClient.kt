@@ -13,14 +13,12 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.CancellationException
 
-// Kelas pembantu untuk menangani kerumitan Login Google
 class GoogleAuthClient(
     private val context: Context
 ) {
     private val oneTapClient: SignInClient = Identity.getSignInClient(context)
     private val auth = FirebaseAuth.getInstance()
 
-    // Data User Sederhana yang akan kita kembalikan ke UI
     data class UserData(
         val userId: String,
         val username: String?,
@@ -28,7 +26,6 @@ class GoogleAuthClient(
         val profilePictureUrl: String?
     )
 
-    // Cek apakah user sudah login sebelumnya?
     fun getSignedInUser(): UserData? = auth.currentUser?.run {
         UserData(
             userId = uid,
@@ -38,7 +35,7 @@ class GoogleAuthClient(
         )
     }
 
-    // Langkah 1: Memulai proses login (Munculkan Popup Pilih Akun)
+    // Memulai proses login (Munculkan Popup Pilih Akun)
     suspend fun signIn(): IntentSender? {
         val result = try {
             oneTapClient.beginSignIn(
@@ -62,7 +59,7 @@ class GoogleAuthClient(
         return result?.pendingIntent?.intentSender
     }
 
-    // Langkah 2: Menangani hasil pilihan user & Login ke Firebase
+    // Menangani hasil pilihan user & Login ke Firebase
     suspend fun signInWithIntent(intent: Intent): SignInResult {
         val credential = oneTapClient.getSignInCredentialFromIntent(intent)
         val googleIdToken = credential.googleIdToken

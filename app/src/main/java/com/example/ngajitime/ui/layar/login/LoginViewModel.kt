@@ -17,16 +17,13 @@ import kotlinx.coroutines.launch
 class LoginViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
-
-    // --- STATE UNTUK WIZARD (Langkah 1-5) ---
     private val _step = MutableStateFlow(1)
     val step: StateFlow<Int> = _step
 
-    // --- PENAMPUNG JAWABAN SEMENTARA ---
     var namaUser = ""
     var emailUser: String? = null
     var frekuensi = ""
-    var levelBaca = "LANCAR" // Default
+    var levelBaca = "LANCAR"
     var kendala = ""
     var tujuan = ""
 
@@ -34,21 +31,18 @@ class LoginViewModel @Inject constructor(
     var modeTarget = "WAKTU"
     var nilaiTarget = 15
 
-    // Fungsi Pindah Langkah
     fun nextStep() { _step.value += 1 }
     fun prevStep() { if (_step.value > 1) _step.value -= 1 }
 
     fun setLoginGoogle(nama: String, email: String) {
         namaUser = nama
         emailUser = email
-        // Langsung lompat ke Step 2 (Lewati input nama manual)
         _step.value = 2
     }
 
-    // --- FUNGSI FINAL: SIMPAN KE DATABASE ---
+    //SIMPAN KE DATABASE
     fun simpanDataUser(onSukses: () -> Unit) {
         viewModelScope.launch {
-            // 1. Tentukan Kecepatan (Detik per Ayat)
             val detikPerAyat = when (levelBaca) {
                 "PEMULA" -> 25 // Terbata-bata
                 "LANCAR" -> 15 // Standar
@@ -56,7 +50,7 @@ class LoginViewModel @Inject constructor(
                 else -> 15
             }
 
-            // 2. Hitung Target Harian
+            //Hitung Target Harian
             var targetHarian = 0
             if (modeTarget == "WAKTU") {
                 // Rumus: (Menit * 60) / DetikPerAyat
@@ -66,7 +60,7 @@ class LoginViewModel @Inject constructor(
                 targetHarian = 6236 / (if (nilaiTarget > 0) nilaiTarget else 1)
             }
 
-            // 3. Buat Object User
+            //Buat Object User
             val userBaru = TargetUser(
                 id = 1,
                 namaUser = namaUser,
@@ -81,7 +75,7 @@ class LoginViewModel @Inject constructor(
                 targetAyatHarian = targetHarian
             )
 
-            // 4. Simpan
+            //Simpan
             repository.saveTarget(userBaru)
             onSukses()
         }
@@ -89,27 +83,23 @@ class LoginViewModel @Inject constructor(
 
     fun onSignInResult(result: SignInResult) {
         result.data?.let { user ->
-            // Jangan langsung set nama/email disini
-
-            // Jalankan pengecekan di background
             viewModelScope.launch {
-                // 1. Cek ke Repository: "Ini orang lama atau baru?"
                 val isUserLama = repository.cekUserLamaDanSimpan(user.userId)
 
                 if (isUserLama) {
-                    // --- SKENARIO A: USER LAMA ---
+                    // Jika user lama
                     // Data sudah didownload repository dan disimpan ke Room.
                     // Langsung lompat ke Selesai (Step terakhir/Home)
                     // Kita set ke angka 99 (kode rahasia untuk "Login Beres")
                     _step.value = 99
 
                 } else {
-                    // --- SKENARIO B: USER BARU ---
+                    // Jika user baru
                     // Siapkan data untuk form personalisasi
                     namaUser = user.username ?: "User"
                     emailUser = user.email
 
-                    // Arahkan ke Step 2 (Personalisasi)
+                    // Arahkan ke Personalisasi
                     _step.value = 2
                 }
             }

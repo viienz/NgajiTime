@@ -23,15 +23,12 @@ class SesiViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // --- DATA TIMER ---
     val waktuTersisa: StateFlow<Long> = TimerService.waktuTersisa
     val statusTimer: StateFlow<TimerService.TimerStatus> = TimerService.statusTimer
 
-    // --- DATA SURAH UNTUK DROPDOWN ---
     val listSurah: StateFlow<List<SurahProgress>> = repository.allSurah
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // FUNGSI MULAI TIMER
     fun mulaiTimer(menit: Int) {
         val durasiDetik = menit * 60L
         val intent = Intent(context, TimerService::class.java).apply {
@@ -41,7 +38,6 @@ class SesiViewModel @Inject constructor(
         context.startService(intent)
     }
 
-    // FUNGSI BATALKAN TIMER (Ganti nama dari stopTimer -> batalkanTimer) ✅
     fun batalkanTimer() {
         val intent = Intent(context, TimerService::class.java).apply {
             action = TimerService.ACTION_STOP
@@ -49,7 +45,6 @@ class SesiViewModel @Inject constructor(
         context.startService(intent)
     }
 
-    // --- SIMPAN HASIL INTEGRASI ---
     fun simpanSesiTerintegrasi(
         durasiDetik: Long,
         surah: SurahProgress,
@@ -57,18 +52,15 @@ class SesiViewModel @Inject constructor(
         onSimpanSukses: () -> Unit
     ) {
         viewModelScope.launch {
-            // 1. Validasi Input
+
             val ayatValid = ayatTerakhirBaru.coerceIn(0, surah.totalAyat)
 
-            // 2. Hitung Berapa Ayat yang DIBACA
             val selisihAyatDibaca = (ayatValid - surah.ayatTerakhirDibaca).coerceAtLeast(0)
 
             val waktuSekarang = System.currentTimeMillis()
 
-            // 3. Update BOOKMARK Surah
             repository.updateProgressSurah(surah.nomorSurah, ayatValid, surah.totalAyat)
 
-            // 4. Simpan ke GRAFIK (History Sesi)
             if (durasiDetik > 0 || selisihAyatDibaca > 0) {
                 val sesiBaru = SesiNgaji(
                     tanggalSesi = waktuSekarang,
@@ -78,7 +70,6 @@ class SesiViewModel @Inject constructor(
                 )
                 repository.insertSesi(sesiBaru)
 
-                // 5. Update TOTAL JEJAK & STREAK
                 if (selisihAyatDibaca > 0) {
                     repository.tambahTotalAyat(selisihAyatDibaca)
                     cekDanUpdateStreak(waktuSekarang)
@@ -88,7 +79,6 @@ class SesiViewModel @Inject constructor(
         }
     }
 
-    // Helper Streak
     private suspend fun cekDanUpdateStreak(waktuSekarang: Long) {
         val user = repository.getUserTargetOneShot() ?: return
         val calToday = Calendar.getInstance().apply { timeInMillis = waktuSekarang }

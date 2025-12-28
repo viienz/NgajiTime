@@ -6,14 +6,14 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "tabel_surah_progress")
 data class SurahProgress(
     @PrimaryKey(autoGenerate = false)
-    val nomorSurah: Int, // 1 sampai 114
+    val nomorSurah: Int,
 
-    val namaSurah: String,      // "Al-Fatihah"
-    val artiSurah: String,      // "Pembukaan"
-    val totalAyat: Int,         // 7
+    val namaSurah: String,
+    val artiSurah: String,
+    val totalAyat: Int,
 
-    // --- Progres User ---
-    val ayatTerakhirDibaca: Int = 0, // User input: "Sampai ayat 5"
+    //Progres User
+    val ayatTerakhirDibaca: Int = 0,
     val isKhatam: Boolean = false,
     val lastUpdated: Long = 0
 )

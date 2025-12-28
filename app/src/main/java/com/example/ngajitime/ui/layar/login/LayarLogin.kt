@@ -40,23 +40,20 @@ import com.example.ngajitime.util.GoogleAuthClient
 @Composable
 fun LayarLogin(
     viewModel: LoginViewModel = hiltViewModel(),
-    onMasuk: () -> Unit,       // Callback saat User Baru selesai setup (Step 5)
-    onLoginSuccess: () -> Unit // Callback saat User Lama terdeteksi (Step 99 -> Home)
+    onMasuk: () -> Unit,
+    onLoginSuccess: () -> Unit
 ) {
-    // Ambil state step dari ViewModel
     val currentStep by viewModel.step.collectAsState()
 
-    // --- 1. TEKNIK BACKGROUND GRADIENT (Agar Tidak Flat) ---
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFFE8F5E9), // Hijau sangat muda (Top)
-            Color(0xFFFFFFFF), // Putih (Tengah)
-            Color(0xFFFFFFFF)  // Putih (Bawah)
+            Color(0xFFE8F5E9),
+            Color(0xFFFFFFFF),
+            Color(0xFFFFFFFF)
         )
     )
 
-    // --- 2. LOGIKA PINDAH HALAMAN OTOMATIS (SINKRONISASI) ---
-    // Jika Step berubah jadi 99 (Kode User Lama), langsung pindah ke Home
+
     LaunchedEffect(currentStep) {
         if (currentStep == 99) {
             onLoginSuccess()
@@ -66,22 +63,19 @@ fun LayarLogin(
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            // Tampilkan Navigasi Bawah HANYA jika bukan sedang Loading (Step 99)
+
             if (currentStep < 99) {
                 NavigasiBawah(currentStep = currentStep, onBack = { viewModel.prevStep() })
             }
         }
     ) { padding ->
-        // Box ini menjadi wadah background gradasi
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundBrush)
                 .padding(padding)
         ) {
-            // Logika Tampilan Utama
             if (currentStep == 99) {
-                // TAMPILAN LOADING (Saat Cek Data User Lama)
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -89,7 +83,6 @@ fun LayarLogin(
                     CircularProgressIndicator(color = Color(0xFF2E7D32))
                 }
             } else {
-                // TAMPILAN FORM WIZARD (User Baru)
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -109,8 +102,6 @@ fun LayarLogin(
         }
     }
 }
-
-// --- KOMPONEN NAVIGASI BAWAH ---
 @Composable
 fun NavigasiBawah(currentStep: Int, onBack: () -> Unit) {
     Row(
@@ -120,7 +111,6 @@ fun NavigasiBawah(currentStep: Int, onBack: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Tombol Back (Hanya muncul jika bukan step 1)
         if (currentStep > 1) {
             TextButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.Gray)
@@ -128,45 +118,38 @@ fun NavigasiBawah(currentStep: Int, onBack: () -> Unit) {
                 Text("Kembali", color = Color.Gray)
             }
         } else {
-            Spacer(modifier = Modifier.width(1.dp)) // Spacer kosong biar layout seimbang
+            Spacer(modifier = Modifier.width(1.dp))
         }
-
-        // Indikator Halaman (Contoh: 1/5)
         Text(
             text = "Langkah $currentStep dari 5",
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF2E7D32), // Hijau NgajiTime
+            color = Color(0xFF2E7D32),
             fontSize = 12.sp
         )
 
-        Spacer(modifier = Modifier.width(48.dp)) // Penyeimbang kanan
+        Spacer(modifier = Modifier.width(48.dp))
     }
 }
 
-// ==========================================
-// ISI HALAMAN (STEP 1 - 5)
-// ==========================================
 
-// --- LANGKAH 1: PERKENALAN & LOGIN ---
+
+//langkah awal dalam login (personalisasi)
 @Composable
 fun StepSatuIntro(viewModel: LoginViewModel) {
     var namaInput by remember { mutableStateOf(viewModel.namaUser) }
 
-    // Persiapan Alat Login Google
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Inisialisasi GoogleAuthClient
     val googleAuthClient = remember { GoogleAuthClient(context) }
 
-    // Launcher: Ini yang menangani hasil setelah user memilih akun Google
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             scope.launch {
                 val signInResult = googleAuthClient.signInWithIntent(result.data ?: return@launch)
-                viewModel.onSignInResult(signInResult) // Kirim hasil ke ViewModel
+                viewModel.onSignInResult(signInResult)
             }
         }
     }
@@ -222,12 +205,10 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // --- TOMBOL GOOGLE (SUDAH AKTIF SEKARANG! 🚀) ---
         OutlinedButton(
             onClick = {
                 scope.launch {
-                    // 1. Mulai proses login, dapatkan IntentSender
+                    // 1. Mulai proses login
                     val signInIntentSender = googleAuthClient.signIn()
 
                     // 2. Luncurkan Popup Pilih Akun
@@ -249,7 +230,7 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
             )
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ic_google), // Pastikan punya icon ini atau ganti icon lain
+                painter = painterResource(id = R.drawable.ic_google),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp)
             )
@@ -260,34 +241,32 @@ fun StepSatuIntro(viewModel: LoginViewModel) {
     }
 }
 
-// --- LANGKAH 2: FREKUENSI ---
+//Personalisasi user
 @Composable
 fun StepDuaFrekuensi(viewModel: LoginViewModel) {
     val opsi = listOf("Setiap Hari (Istiqomah)", "Beberapa kali seminggu", "Hanya saat Ramadan/Acara", "Sudah lama tidak ngaji")
-    // Ambil data lama kalau ada, biar pilihan tidak hilang saat tombol Back ditekan
+
     var selected by remember { mutableStateOf(viewModel.frekuensi) }
 
     Column {
-        // Konten Pilihan
         ContentPilihan(
             judul = "Seberapa sering biasanya kamu mengaji?",
             deskripsi = "Pilih satu yang paling sesuai kondisi saat ini.",
             opsiList = opsi,
             selectedItem = selected,
             onSelect = { jawaban ->
-                selected = jawaban // Cuma ganti warna hijau, JANGAN pindah halaman dulu
+                selected = jawaban
             }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Tombol Lanjut Manual
         Button(
             onClick = {
-                viewModel.frekuensi = selected // Simpan ke ViewModel
-                viewModel.nextStep() // Baru pindah halaman
+                viewModel.frekuensi = selected
+                viewModel.nextStep()
             },
-            enabled = selected.isNotEmpty(), // Tombol mati kalau belum pilih
+            enabled = selected.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
             shape = RoundedCornerShape(12.dp),
@@ -298,7 +277,7 @@ fun StepDuaFrekuensi(viewModel: LoginViewModel) {
     }
 }
 
-// --- LANGKAH 3: LEVEL BACA ---
+//LEVEL BACA
 @Composable
 fun StepTigaLevel(viewModel: LoginViewModel) {
     val opsi = listOf("PEMULA", "LANCAR", "MAHIR")
@@ -309,25 +288,22 @@ fun StepTigaLevel(viewModel: LoginViewModel) {
         Text("Bagaimana kelancaran bacaanmu?", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
         Spacer(modifier = Modifier.height(24.dp))
 
-        // List Pilihan
         opsi.forEachIndexed { index, value ->
             PilihanItem(
                 text = labelOpsi[index],
                 isSelected = selected == value,
-                onClick = { selected = value } // Cuma update tampilan
+                onClick = { selected = value }
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Tombol Lanjut
         Button(
             onClick = {
                 viewModel.levelBaca = selected
                 viewModel.nextStep()
             },
-            // Tidak perlu enabled check karena defaultnya "LANCAR" (pasti ada isi)
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
             shape = RoundedCornerShape(12.dp),
@@ -338,7 +314,7 @@ fun StepTigaLevel(viewModel: LoginViewModel) {
     }
 }
 
-// --- LANGKAH 4: TUJUAN ---
+//TUJUAN
 @Composable
 fun StepEmpatTujuan(viewModel: LoginViewModel) {
     val opsi = listOf("Membangun Kebiasaan Rutin", "Khatam Al-Qur'an Secepatnya", "Mencari Ketenangan Hati", "Memperbaiki Bacaan")
@@ -350,12 +326,10 @@ fun StepEmpatTujuan(viewModel: LoginViewModel) {
             deskripsi = "Kami akan bantu kamu capai target ini.",
             opsiList = opsi,
             selectedItem = selected,
-            onSelect = { selected = it } // Cuma ganti warna hijau
+            onSelect = { selected = it }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
-
-        // Tombol Lanjut
         Button(
             onClick = {
                 viewModel.tujuan = selected
@@ -372,7 +346,7 @@ fun StepEmpatTujuan(viewModel: LoginViewModel) {
     }
 }
 
-// --- LANGKAH 5: TARGET ---
+//TARGET
 @Composable
 fun StepLimaTarget(viewModel: LoginViewModel, onSelesai: () -> Unit) {
     var mode by remember { mutableStateOf("WAKTU") }
@@ -384,7 +358,6 @@ fun StepLimaTarget(viewModel: LoginViewModel, onSelesai: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // TAB MODE (Lebih cantik)
         Card(
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -432,9 +405,6 @@ fun StepLimaTarget(viewModel: LoginViewModel, onSelesai: () -> Unit) {
     }
 }
 
-// ==========================================
-// KOMPONEN PENDUKUNG (STYLING)
-// ==========================================
 
 @Composable
 fun ContentPilihan(judul: String, deskripsi: String, opsiList: List<String>, selectedItem: String, onSelect: (String) -> Unit) {
@@ -452,18 +422,16 @@ fun ContentPilihan(judul: String, deskripsi: String, opsiList: List<String>, sel
 
 @Composable
 fun PilihanItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    // KARTU YANG LEBIH TIMBUL (ELEVATION)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if(isSelected) Color(0xFFE8F5E9) else Color.White // Hijau muda jika dipilih
+            containerColor = if(isSelected) Color(0xFFE8F5E9) else Color.White
         ),
-        // Tambahkan border hijau jika dipilih
         border = if(isSelected) BorderStroke(2.dp, Color(0xFF2E7D32)) else BorderStroke(0.dp, Color.Transparent),
-        // Efek bayangan agar tidak flat
+
         elevation = CardDefaults.cardElevation(defaultElevation = if(isSelected) 4.dp else 1.dp)
     ) {
         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {

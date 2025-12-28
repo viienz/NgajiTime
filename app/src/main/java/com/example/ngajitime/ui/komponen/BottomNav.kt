@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// Ini agar kode kita rapi saat memilih menu aktif
 enum class MenuAktif { BERANDA, SURAH, STATS, PROFIL }
 
 @Composable
@@ -26,28 +25,28 @@ fun NgajiBottomBar(
     onKeProfil: () -> Unit
 ) {
     NavigationBar(containerColor = Color.White) {
-        // 1. BERANDA
+        //BERANDA
         ItemNav(
             label = "Beranda",
             icon = Icons.Default.Home,
             isActive = menuAktif == MenuAktif.BERANDA,
             onClick = onKeBeranda
         )
-        // 2. SURAH
+        //SURAH
         ItemNav(
             label = "Surah",
             icon = Icons.Default.MenuBook,
             isActive = menuAktif == MenuAktif.SURAH,
             onClick = onKeSurah
         )
-        // 3. STATS
+        //STATS
         ItemNav(
             label = "Stats",
             icon = Icons.Default.BarChart,
             isActive = menuAktif == MenuAktif.STATS,
             onClick = onKeStats
         )
-        // 4. PROFIL
+        //PROFIL
         ItemNav(
             label = "Profil",
             icon = Icons.Default.Person,
@@ -57,7 +56,6 @@ fun NgajiBottomBar(
     }
 }
 
-// Komponen Kecil untuk Item
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.ItemNav(
     label: String,
@@ -71,9 +69,9 @@ private fun androidx.compose.foundation.layout.RowScope.ItemNav(
         icon = { Icon(icon, contentDescription = null) },
         label = { Text(label) },
         colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = Color(0xFF2E7D32), // Hijau
+            selectedIconColor = Color(0xFF2E7D32),
             selectedTextColor = Color(0xFF2E7D32),
-            indicatorColor = Color(0xFFE8F5E9) // Hijau Muda background
+            indicatorColor = Color(0xFFE8F5E9)
         )
     )
 }

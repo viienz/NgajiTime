@@ -14,16 +14,13 @@ class ProfilViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
 
-    // 1. AMBIL DATA USER (Real-time)
     val userTarget = repository.getUserTarget()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun logout(onLogoutSukses: () -> Unit) {
         viewModelScope.launch {
-            // GANTI 'repository.hapusUser()' MENJADI INI:
             repository.clearAllLocalData()
 
-            // Panggil callback agar UI tahu proses hapus data sudah selesai
             onLogoutSukses()
         }
     }
@@ -59,14 +56,10 @@ class ProfilViewModel @Inject constructor(
         }
     }
 
-    // STREAK FREEZE
     fun toggleStreakFreeze(isAktif: Boolean) {
-        // 1. Ambil data user yang sedang tampil di layar
         val currentUser = userTarget.value ?: return
 
         viewModelScope.launch {
-            // 2. Kita "Copy" data user tersebut, tapi ubah bagian isStreakFreeze saja
-            // 3. Lalu Simpan ulang (Menimpa data lama dengan ID yang sama)
             repository.saveTarget(
                 currentUser.copy(isStreakFreeze = isAktif)
             )
@@ -77,7 +70,6 @@ class ProfilViewModel @Inject constructor(
     fun updateNama(namaBaru: String) {
         val currentUser = userTarget.value ?: return
         viewModelScope.launch {
-            // Copy data user saat ini, tapi ganti namanya saja
             repository.saveTarget(
                 currentUser.copy(namaUser = namaBaru)
             )

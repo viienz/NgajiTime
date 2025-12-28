@@ -67,7 +67,7 @@ fun LayarProfil(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // 1. HEADER (Avatar)
+            //HEADER
             Box(
                 modifier = Modifier.size(100.dp).clip(CircleShape).background(Color.White),
                 contentAlignment = Alignment.Center
@@ -77,9 +77,6 @@ fun LayarProfil(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- HEADER NAMA BARU (RAPH & BERSIH) ---
-
-            // Row agar Nama dan Ikon sejajar ke samping
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -96,12 +93,10 @@ fun LayarProfil(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Edit Nama",
-                    tint = Color(0xFF2E7D32), // Hijau biar cantik
+                    tint = Color(0xFF2E7D32),
                     modifier = Modifier.size(20.dp)
                 )
             }
-
-            // Teks Status (Mode Tamu / Email) ditaruh DI BAWAH Row nama
             Text(
                 text = if (user?.email != null) "${user?.email}" else "Mode Tamu (Offline)",
                 fontSize = 14.sp,
@@ -111,7 +106,6 @@ fun LayarProfil(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 2. KARTU TARGET (FITUR LAMA)
             Text("Pengaturan Ngaji", modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
 
             Card(
@@ -135,7 +129,6 @@ fun LayarProfil(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. [BARU] STREAK FREEZE SWITCH ❄️
             ItemSwitch(
                 icon = Icons.Outlined.AcUnit,
                 judul = "Mode Cuti (Streak Freeze)",
@@ -146,7 +139,6 @@ fun LayarProfil(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 4. LOGIKA TOMBOL AKUN
             if (user?.email == null) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),

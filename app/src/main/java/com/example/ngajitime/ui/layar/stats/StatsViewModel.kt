@@ -14,7 +14,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
-// --- DATA CLASS PIALA BARU 🏆 ---
 data class Piala(
     val id: Int,
     val judul: String,
@@ -34,11 +33,9 @@ class StatsViewModel @Inject constructor(
     private val repository: NgajiRepository
 ) : ViewModel() {
 
-    // 1. DATA USER
     val userTarget: StateFlow<TargetUser?> = repository.getUserTarget()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // 2. LOGIKA PIALA (HALL OF FAME) 🏆 [BARU]
     val koleksiPiala: StateFlow<List<Piala>> = userTarget.map { user ->
         val totalAyat = user?.totalAyatDibaca ?: 0
         val streak = user?.currentStreak ?: 0
@@ -59,7 +56,6 @@ class StatsViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
 
-    // 3. LOGIKA GRAFIK (KODE LAMA ANDA - TETAP AMAN) ✅
     private val _offsetMinggu = MutableStateFlow(0)
     val offsetMinggu: StateFlow<Int> = _offsetMinggu
 

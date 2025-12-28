@@ -38,14 +38,11 @@ fun LayarTimer(
     onSelesai: (Long) -> Unit = {},
     onBatal: () -> Unit = {}
 ) {
-    // Ambil Data dari ViewModel
     val waktuTersisa by viewModel.waktuTersisa.collectAsState()
     val status by viewModel.statusTimer.collectAsState()
 
-    // State Lokal untuk Durasi yang Dipilih (Misal: 30 menit)
     var durasiDipilihMenit by remember { mutableIntStateOf(30) }
 
-    // BACKGROUND ESTETIK (Tetap Sama)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -59,7 +56,6 @@ fun LayarTimer(
     ) {
 
         if (status == TimerService.TimerStatus.IDLE) {
-            // TAMPILAN SETUP (Tetap Sama)
             TampilanSetupTimer(
                 durasiDipilih = durasiDipilihMenit,
                 onPilihDurasi = { durasiDipilihMenit = it },
@@ -67,17 +63,16 @@ fun LayarTimer(
                 onBatal = onBatal
             )
         } else {
-            // TAMPILAN COUNTDOWN (UPDATE LOGIKA DISINI) ✅
             TampilanCountdown(
                 detikSisa = waktuTersisa,
                 status = status,
                 onStop = {
                     viewModel.batalkanTimer()
 
-                    // 1. Hitung Total Detik Target (Misal: 1 menit = 60 detik)
+                    // Hitung Total Detik Target (Misal: 1 menit = 60 detik)
                     val targetDetik = durasiDipilihMenit * 60L
 
-                    // 2. Hitung Durasi Real yang Berjalan
+                    // Hitung Durasi Real yang Berjalan
                     val durasiReal = if (status == TimerService.TimerStatus.FINISHED) {
                         targetDetik // Kalau selesai normal, ambil full target
                     } else {
@@ -85,7 +80,7 @@ fun LayarTimer(
                         (targetDetik - waktuTersisa).coerceAtLeast(0)
                     }
 
-                    // 3. Kirim Durasi Asli ke Layar Input
+                    // Kirim Durasi Asli ke Layar Input
                     onSelesai(durasiReal)
                 }
             )
@@ -93,7 +88,6 @@ fun LayarTimer(
     }
 }
 
-// UI 1: PILIH DURASI
 @Composable
 fun TampilanSetupTimer(
     durasiDipilih: Int,
@@ -101,10 +95,8 @@ fun TampilanSetupTimer(
     onMulai: () -> Unit,
     onBatal: () -> Unit
 ) {
-    // State untuk Dialog Custom
     var showCustomDialog by remember { mutableStateOf(false) }
 
-    // Jika dialog aktif, tampilkan
     if (showCustomDialog) {
         DialogCustomWaktu(
             onDismiss = { showCustomDialog = false },
@@ -120,7 +112,6 @@ fun TampilanSetupTimer(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Tombol Batal
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             IconButton(onClick = onBatal, modifier = Modifier.align(Alignment.TopStart)) {
                 Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
@@ -129,7 +120,6 @@ fun TampilanSetupTimer(
 
         Text("Mau Fokus Berapa Lama?", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
-        // Tampilkan Angka Besar Durasi yang Dipilih
         Text(
             text = "$durasiDipilih Menit",
             fontSize = 48.sp,
@@ -138,7 +128,6 @@ fun TampilanSetupTimer(
             modifier = Modifier.padding(vertical = 24.dp)
         )
 
-        // Grid Pilihan Waktu (Tambah Opsi -1 untuk Custom)
         val pilihan = listOf(15, 30, 45, 60, -1)
 
         Row(
@@ -146,11 +135,7 @@ fun TampilanSetupTimer(
             horizontalArrangement = Arrangement.Center, // Rata Tengah
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Kita pecah jadi 2 baris atau flow row kalau mau rapi,
-            // tapi untuk simpelnya kita pakai Row horizontal scrollable atau wrap
-            // Disini saya pakai Row biasa dengan Logika Tampilan Khusus
 
-            // Agar rapi, kita buat tombol pilihan
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 listOf(15, 30, 45, 60).forEach { menit ->
                     TimerChip(
@@ -164,17 +149,15 @@ fun TampilanSetupTimer(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tombol Custom (Lainnya) terpisah biar rapi
         TimerChip(
             label = "Atur Sendiri ✏️",
-            isSelected = false, // Tidak perlu highlight permanen
+            isSelected = false,
             onClick = { showCustomDialog = true },
-            modifier = Modifier.width(150.dp)
+            modifier = Modifier.width(130.dp)
         )
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Tombol Mulai
         Button(
             onClick = onMulai,
             modifier = Modifier.fillMaxWidth().height(60.dp),
@@ -189,7 +172,6 @@ fun TampilanSetupTimer(
     }
 }
 
-// KOMPONEN KECIL: CHIP WAKTU
 @Composable
 fun TimerChip(
     label: String,
@@ -215,7 +197,7 @@ fun TimerChip(
     }
 }
 
-// KOMPONEN BARU: DIALOG INPUT CUSTOM
+// DIALOG INPUT
 @Composable
 fun DialogCustomWaktu(
     onDismiss: () -> Unit,
@@ -257,7 +239,7 @@ fun DialogCustomWaktu(
 }
 
 
-// UI 2: COUNTDOWN ANIMASI
+// COUNTDOWN ANIMASI
 @Composable
 fun TampilanCountdown(
     detikSisa: Long,
@@ -274,13 +256,12 @@ fun TampilanCountdown(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 1. HEADER (LABEL FOCUS MODE) - Pojok Kanan Atas
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 48.dp, end = 24.dp) // Jarak dari atas & kanan
+                .padding(top = 48.dp, end = 24.dp)
                 .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.End // Rata Kanan
+            horizontalArrangement = Arrangement.End
         ) {
             Text(
                 text = "FOCUS MODE",
@@ -296,13 +277,12 @@ fun TampilanCountdown(
             )
         }
 
-        // 2. CENTER CONTENT (JAM & LINGKARAN)
         Box(
             modifier = Modifier.align(Alignment.Center),
             contentAlignment = Alignment.Center
         ) {
             // Lingkaran Aura
-            Canvas(modifier = Modifier.size(280.dp)) { // Ukuran sedikit disesuaikan
+            Canvas(modifier = Modifier.size(280.dp)) {
                 drawCircle(
                     color = Color.White.copy(alpha = 0.1f),
                     style = Stroke(width = 3.dp.toPx())
@@ -314,7 +294,7 @@ fun TampilanCountdown(
                     text = waktuFormat,
                     style = TextStyle(
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 48.sp, // DIPERKECIL dari 56.sp agar lebih pas
+                        fontSize = 48.sp,
                         fontWeight = FontWeight.Medium,
                         color = warnaStatus,
                         shadow = Shadow(color = warnaStatus, blurRadius = 20f)
@@ -329,7 +309,6 @@ fun TampilanCountdown(
             }
         }
 
-        // 3. FOOTER (TOMBOL BATALKAN)
         Button(
             onClick = onStop,
             modifier = Modifier
