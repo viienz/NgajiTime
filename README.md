@@ -53,7 +53,7 @@ Aplikasi ini menerapkan prinsip **Offline-First**:
 
 1.  **Clone Repository**
     ```bash
-    git clone [https://github.com/username/NgajiYuk.git](https://github.com/username/NgajiYuk.git)
+    git clone [https://github.com/viienz/NgajiTime.git]
     ```
 2.  **Buka di Android Studio** (Disarankan versi Hedgehog atau terbaru).
 3.  **Setup Firebase**
