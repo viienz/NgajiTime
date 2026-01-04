@@ -6,19 +6,32 @@ Berbeda dengan aplikasi Al-Qur'an biasa, NgajiYuk berfokus pada **Manajemen Targ
 ## ✨ Fitur Unggulan
 
 ### 1. 🎯 Smart Target Calculation
-Bingung harus baca berapa ayat hari ini? Cukup tentukan tanggal target khatam, dan algoritma kami akan menghitung **beban harian** secara otomatis dan presisi.
+Bingung harus baca berapa ayat hari ini? Cukup tentukan tanggal target khatam, dan algoritma kami akan menghitung **beban harian** secara otomatis dan presisi. Progres dilacak real-time agar Anda tetap *on-track*.
 
-### 2. 🔥 Gamification System
+### 2. 📖 Digital Quran & Progress Tracking
+Akses daftar surah dan lacak persentase bacaan di setiap surah agar Anda tahu seberapa jauh progres hafalan atau tilawah Anda.
+
+### 3. ⏱️ Focus Timer (Ibadah Mode)
+Fitur timer khusus untuk mencatat durasi mengaji secara akurat.
+* Fokus pada bacaan, biarkan aplikasi yang mencatat waktu.
+* Durasi otomatis dikonversi menjadi data statistik harian.
+
+### 4. 🔥 Gamification System
 Menjaga motivasi dengan pendekatan psikologis:
-* **Day Streak:** Pertahankan api semangat agar tidak padam.
+* **Day Streak:** Pertahankan api semangat agar tidak padam (jangan sampai putus hari!).
 * **Badges:** Dapatkan penghargaan visual untuk setiap pencapaian.
 
-### 3. ☁️ Hybrid Offline-First Architecture
+### 5. 📊 Comprehensive Analytics
+Bukan sekadar angka. Kami menyajikan data kebiasaan Anda dalam bentuk visual:
+* **Weekly Graph:** Pantau konsistensi bacaan dalam 7 hari terakhir.
+* **Activity Calendar:** Kalender visual (heatmap) yang merekam jejak ibadah Anda seperti kontribusi GitHub.
+
+### 6. ☁️ Hybrid Offline-First Architecture
 Fitur teknis andalan kami. Aplikasi menggunakan **Room Database** sebagai *Single Source of Truth* di sisi klien.
 * **No Internet? No Problem.** Aplikasi tetap responsif 100% saat offline.
 * **Auto Sync.** Data akan disinkronisasi ke **Firebase Firestore** secara otomatis saat koneksi kembali tersedia.
 
-### 4. 🕌 Real-time Prayer Awareness
+### 7. 🕌 Real-time Prayer Awareness
 Header dinamis yang menyesuaikan dengan waktu sholat saat ini (Subuh, Dhuha, Maghrib, dll), mengingatkan pengguna untuk menyempatkan waktu mengaji.
 
 ---
