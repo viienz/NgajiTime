@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,8 @@ import com.example.ngajitime.ui.theme.NgajiTimeTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
+import com.example.ngajitime.util.NetworkObserver
+import com.example.ngajitime.ui.komponen.ConnectivityBanner
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -30,31 +33,42 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val networkObserver = NetworkObserver(applicationContext)
+
         setContent {
             NgajiTimeTheme {
+                val statusInternet by networkObserver.observe().collectAsState(initial = true)
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var startScreen by remember { mutableStateOf("") }
+                    Column(modifier = Modifier.fillMaxSize()) {
 
-                    LaunchedEffect(Unit) {
-                        val user = repository.getUserTarget().firstOrNull()
-                        if (user != null) {
-                            startScreen = Rute.BERANDA
-                        } else {
-                            startScreen = Rute.LOGIN
-                        }
-                    }
+                        ConnectivityBanner(isOnline = statusInternet)
+                        Box(modifier = Modifier.weight(1f)) {
 
-                    if (startScreen.isNotEmpty()) {
-                        NgajiNavGraph(startDestination = startScreen)
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                            var startScreen by remember { mutableStateOf("") }
+
+                            LaunchedEffect(Unit) {
+                                val user = repository.getUserTarget().firstOrNull()
+                                if (user != null) {
+                                    startScreen = Rute.BERANDA
+                                } else {
+                                    startScreen = Rute.LOGIN
+                                }
+                            }
+
+                            if (startScreen.isNotEmpty()) {
+                                NgajiNavGraph(startDestination = startScreen)
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
                         }
                     }
                 }

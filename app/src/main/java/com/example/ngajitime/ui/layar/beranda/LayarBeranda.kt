@@ -20,11 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,24 +48,30 @@ fun LayarBeranda(
     onKeProfil: () -> Unit,
     onKeTimer: () -> Unit
 ) {
-    //mengambil data real time
+    // 1. Ambil data state
     val user by viewModel.userTarget.collectAsState()
     val lastReadData by viewModel.lastRead.collectAsState()
     val halamanHariIni by viewModel.halamanHariIni.collectAsState()
     val listKalender by viewModel.listKalender.collectAsState()
 
-
+    // 2. Hitung Progress
     val targetAyat = user?.targetAyatHarian ?: 1
     val ayatHariIni = halamanHariIni
     val progressPersen = ((ayatHariIni.toFloat() / targetAyat.toFloat()) * 100).coerceIn(0f, 100f)
     val isTargetReached = ayatHariIni >= targetAyat
 
+    // 3. Hitung Waktu Sholat (LOGIKA DIPERBAIKI DISINI)
+    val calendar = remember { java.util.Calendar.getInstance() }
+    val jamSekarang = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+    val teksWaktuSholat = getInfoWaktu(jamSekarang)
 
+    // 4. Data UI
     val namaUser = user?.namaUser ?: "Sobat Ngaji"
     val streakCount = user?.currentStreak ?: 0
-    val lastReadSurah = lastReadData?.namaSurah ?: "Belum ada"
+    val lastReadSurah = lastReadData?.namaSurah ?: "Belum ada bacaan"
     val lastReadAyat = lastReadData?.ayatTerakhirDibaca ?: 0
-    val lastReadInfo = if (lastReadData != null) "Lanjutkan progressmu" else "Ayo mulai mengaji"
+    // Fix logic info ayat
+    val lastReadInfo = if (lastReadData != null && lastReadAyat > 0) "Ayat $lastReadAyat" else "(Lanjutkan progressmu)"
 
     Scaffold(
         floatingActionButton = {
@@ -98,15 +104,17 @@ fun LayarBeranda(
                 .fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
-
             item {
-                HeaderSection(namaUser = namaUser)
+                // KIRIM PARAMETER WAKTU KE SINI
+                HeaderSection(
+                    namaUser = namaUser,
+                    infoWaktu = teksWaktuSholat
+                )
             }
 
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                     Spacer(modifier = Modifier.height(16.dp))
-
 
                     KartuTargetBesar(
                         ayatDibaca = ayatHariIni,
@@ -117,12 +125,10 @@ fun LayarBeranda(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-
                         KartuStreakKecil(
                             streak = streakCount,
                             modifier = Modifier.weight(1f)
@@ -137,8 +143,7 @@ fun LayarBeranda(
 
                     LastReadCard(
                         surah = lastReadSurah,
-                        ayat = lastReadAyat,
-                        info = lastReadInfo
+                        ayatInfo = lastReadInfo
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -163,19 +168,21 @@ fun LayarBeranda(
 }
 
 @Composable
-fun HeaderSection(namaUser: String) {
+fun HeaderSection(
+    namaUser: String,
+    infoWaktu: String
+) {
     val calendar = Calendar.getInstance()
     val jam = calendar.get(Calendar.HOUR_OF_DAY)
     val menit = calendar.get(Calendar.MINUTE)
     val jamString = String.format("%02d : %02d", jam, menit)
-    val infoWaktu = getInfoWaktu(jam)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .padding(top = 24.dp)
-            .height(180.dp),
+            .height(200.dp),
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -186,16 +193,19 @@ fun HeaderSection(namaUser: String) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
             Box(
-                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f))
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f))
             )
+
             Column(
                 modifier = Modifier.padding(20.dp).fillMaxSize()
             ) {
+                // Bagian Atas: Salam & Notif
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("Assalamualaikum,", color = Color.White, fontSize = 12.sp)
-                        Text(namaUser, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Assalamualaikum,", color = Color.White, fontSize = 14.sp) // Naik dikit size-nya
+                        Text(namaUser, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Box(
@@ -207,34 +217,37 @@ fun HeaderSection(namaUser: String) {
                         Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     }
                 }
+
+                // Bagian Tengah: Jam & Kapsul
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // JAM BESAR
                         Text(
                             text = jamString,
                             color = Color.White,
-                            fontSize = 48.sp,
+                            fontSize = 50.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            style = androidx.compose.ui.text.TextStyle(
-                                shadow = androidx.compose.ui.graphics.Shadow(
-                                    color = Color.Black.copy(alpha = 0.3f),
-                                    blurRadius = 10f
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 0.5f),
+                                    blurRadius = 15f
                                 )
                             )
                         )
+
                         Surface(
-                            color = Color.White.copy(alpha = 0.25f),
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = Color.Black.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(50)
                         ) {
                             Text(
-                                text = infoWaktu,
+                                text = if (infoWaktu.isNotEmpty()) infoWaktu else "Waktu Ngaji",
                                 color = Color.White,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                                fontWeight = FontWeight.ExtraLight,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -245,172 +258,7 @@ fun HeaderSection(namaUser: String) {
 }
 
 @Composable
-fun KartuTargetBesar(
-    ayatDibaca: Int,
-    targetAyat: Int,
-    progress: Float,
-    isReached: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(GradienBiru1, GradienBiru2) // Biru Langit
-                    )
-                )
-                .padding(24.dp)
-        ) {
-            Column {
-                Text("Target Harian Kamu", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = "$ayatDibaca / $targetAyat",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Ayat",
-                        fontSize = 16.sp,
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "${(progress * 100).toInt()}%",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(6.dp)),
-                    color = Color(0xFFFFEB3B), // Kuning Emas biar kontras
-                    trackColor = Color.White.copy(alpha = 0.3f),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (isReached) Icons.Rounded.EmojiEvents else Icons.Rounded.LocalFireDepartment,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isReached) "Hebat! Target tercapai 🎉" else "Semangat kejar targetmu!",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun KartuStreakKecil(streak: Int, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.height(140.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = HijauStreak)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-
-            Icon(
-                imageVector = Icons.Rounded.LocalFireDepartment,
-                contentDescription = "Streak",
-                tint = Color(0xFFFF5722),
-                modifier = Modifier.size(28.dp)
-            )
-
-            Text(
-                text = streak.toString(),
-                fontSize = 40.sp, // Sangat Besar
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF33691E) // Hijau Tua
-            )
-
-            Text(
-                text = "Day Streak",
-                fontSize = 12.sp,
-                color = Color(0xFF558B2F),
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-fun StatusBadgeCard(
-    totalAyat: Int,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(140.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp).fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color(0xFFE3F2FD), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MenuBook,
-                    contentDescription = "Total Jejak",
-                    tint = Color(0xFF1976D2),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Text(
-                text = "$totalAyat",
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 28.sp,
-                color = Color(0xFF263238)
-            )
-            Text(
-                text = "Total Ayat",
-                fontSize = 12.sp,
-                color = Color(0xFF78909C),
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-fun LastReadCard(surah: String, ayat: Int, info: String) {
+fun LastReadCard(surah: String, ayatInfo: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -423,15 +271,89 @@ fun LastReadCard(surah: String, ayat: Int, info: String) {
                 contentDescription = null,
                 modifier = Modifier.size(40.dp)
             )
+
             Spacer(modifier = Modifier.width(16.dp))
+
             Column {
-                Text("Terakhir dibaca", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val teksAyat = if(ayat > 0) "Ayat $ayat" else ""
-                    Text("$surah $teksAyat", fontWeight = FontWeight.Medium)
-                }
-                Text("($info)", fontSize = 11.sp, color = Color.Gray)
+                Text("Terakhir dibaca", fontWeight = FontWeight.Normal, fontSize = 12.sp, color = Color.Gray)
+
+                Text(
+                    text = surah,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color.Black
+                )
+
+                Text(
+                    text = ayatInfo,
+                    fontSize = 12.sp,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Medium
+                )
             }
+        }
+    }
+}
+@Composable
+fun KartuTargetBesar(ayatDibaca: Int, targetAyat: Int, progress: Float, isReached: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .background(Brush.linearGradient(colors = listOf(GradienBiru1, GradienBiru2)))
+                .padding(24.dp)
+        ) {
+            Column {
+                Text("Target Harian Kamu", color = Color.White.copy(alpha = 0.9f), fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("$ayatDibaca / $targetAyat", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Ayat", fontSize = 16.sp, color = Color.White.copy(alpha = 0.8f), modifier = Modifier.padding(bottom = 6.dp))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("${(progress * 100).toInt()}%", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(6.dp)),
+                    color = Color(0xFFFFEB3B),
+                    trackColor = Color.White.copy(alpha = 0.3f),
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (isReached) Icons.Rounded.EmojiEvents else Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (isReached) "Hebat! Target tercapai 🎉" else "Semangat kejar targetmu!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun KartuStreakKecil(streak: Int, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.height(140.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = HijauStreak)) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(Icons.Rounded.LocalFireDepartment, contentDescription = "Streak", tint = Color(0xFFFF5722), modifier = Modifier.size(28.dp))
+            Text(streak.toString(), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF33691E))
+            Text("Day Streak", fontSize = 12.sp, color = Color(0xFF558B2F), fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun StatusBadgeCard(totalAyat: Int, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.height(140.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+        Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
+            Box(modifier = Modifier.size(48.dp).background(Color(0xFFE3F2FD), CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.MenuBook, contentDescription = "Total Jejak", tint = Color(0xFF1976D2), modifier = Modifier.size(24.dp))
+            }
+            Text("$totalAyat", fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, color = Color(0xFF263238))
+            Text("Total Ayat", fontSize = 12.sp, color = Color(0xFF78909C), fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -442,7 +364,6 @@ fun KalenderMingguanSection(listData: List<KalenderItemData>) {
         val fmt = SimpleDateFormat("MMMM yyyy", java.util.Locale("id", "ID"))
         fmt.format(java.util.Date())
     }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(titleBulan, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -450,50 +371,21 @@ fun KalenderMingguanSection(listData: List<KalenderItemData>) {
             Text("Minggu Ini", fontSize = 12.sp, color = Color.Gray)
         }
         Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             listData.forEach { item ->
-                KalenderItem(
-                    hari = item.hari,
-                    tanggal = item.tanggal,
-                    isActive = item.isAdaSesi,
-                    isHariIni = item.isHariIni
-                )
+                KalenderItem(item.hari, item.tanggal, item.isAdaSesi, item.isHariIni)
             }
-
-            if (listData.isEmpty()) {
-                Text("Memuat kalender...", fontSize = 12.sp, color = Color.Gray)
-            }
+            if (listData.isEmpty()) { Text("Memuat kalender...", fontSize = 12.sp, color = Color.Gray) }
         }
     }
 }
+
 @Composable
 fun KalenderItem(hari: String, tanggal: String, isActive: Boolean, isHariIni: Boolean) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isActive) HijauStreak else Color.Transparent)
-            .padding(vertical = 8.dp, horizontal = 12.dp)
-    ) {
-        Text(
-            text = hari,
-            fontSize = 12.sp,
-            color = if (isHariIni || isActive) Color(0xFF263238) else Color.Gray,
-            fontWeight = if (isHariIni) FontWeight.Bold else FontWeight.Normal
-        )
-
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (isActive) HijauStreak else Color.Transparent).padding(vertical = 8.dp, horizontal = 12.dp)) {
+        Text(hari, fontSize = 12.sp, color = if (isHariIni || isActive) Color(0xFF263238) else Color.Gray, fontWeight = if (isHariIni) FontWeight.Bold else FontWeight.Normal)
         Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = tanggal,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            color = if (isActive || isHariIni) Color(0xFF263238) else Color.Black
-        )
+        Text(tanggal, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isActive || isHariIni) Color(0xFF263238) else Color.Black)
     }
 }
 
@@ -507,6 +399,6 @@ fun getInfoWaktu(jam: Int): String {
         in 15..17 -> "Waktu Ashar"
         in 18..18 -> "Waktu Maghrib"
         in 19..23 -> "Waktu Isya"
-        else -> "Waktu Istirahat"
+        else -> "Qiyamul Lail"
     }
 }
