@@ -1,6 +1,6 @@
 # 📖 NgajiYuk - Your Personal Spiritual Assistant
 
-**NgajiYuk** (sebelumnya *NgajiTime*) adalah aplikasi produktivitas spiritual yang dirancang untuk membantu umat Muslim menjaga konsistensi (istiqomah) dalam membaca Al-Qur'an. 
+**NgajiYuk** adalah aplikasi produktivitas spiritual yang dirancang untuk membantu umat Muslim menjaga konsistensi (istiqomah) dalam membaca Al-Qur'an. 
 Berbeda dengan aplikasi Al-Qur'an biasa, NgajiYuk berfokus pada **Manajemen Target** dan **Gamifikasi**, didukung dengan teknologi **Offline-First** yang memastikan data progres tidak akan hilang meski berganti perangkat.
 
 ## ✨ Fitur Unggulan
