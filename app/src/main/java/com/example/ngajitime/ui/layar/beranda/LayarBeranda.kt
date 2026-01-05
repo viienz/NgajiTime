@@ -2,15 +2,18 @@ package com.example.ngajitime.ui.layar.beranda
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items // Import ini penting buat list notifikasi
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.*
@@ -21,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -34,12 +38,14 @@ import com.example.ngajitime.ui.komponen.NgajiBottomBar
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+// --- WARNA ---
 val HijauStreak = Color(0xFFAEEA5C)
 val HijauTombol = Color(0xFF4CAF50)
 val BiruMudaBg = Color(0xFFF0F4F8)
 val GradienBiru1 = Color(0xFF42A5F5)
 val GradienBiru2 = Color(0xFF1976D2)
 
+@OptIn(ExperimentalMaterial3Api::class) // Buat ModalBottomSheet
 @Composable
 fun LayarBeranda(
     viewModel: BerandaViewModel = hiltViewModel(),
@@ -54,24 +60,88 @@ fun LayarBeranda(
     val halamanHariIni by viewModel.halamanHariIni.collectAsState()
     val listKalender by viewModel.listKalender.collectAsState()
 
-    // 2. Hitung Progress
+    // 2. Data Notifikasi (REALTIME DARI ROOM)
+    val listNotifikasi by viewModel.listNotifikasi.collectAsState()
+    val unreadCount by viewModel.unreadCount.collectAsState()
+
+    // State buat Bottom Sheet
+    var showNotificationSheet by remember { mutableStateOf(false) }
+
+    // 3. Hitung Progress & Waktu
     val targetAyat = user?.targetAyatHarian ?: 1
     val ayatHariIni = halamanHariIni
     val progressPersen = ((ayatHariIni.toFloat() / targetAyat.toFloat()) * 100).coerceIn(0f, 100f)
     val isTargetReached = ayatHariIni >= targetAyat
 
-    // 3. Hitung Waktu Sholat (LOGIKA DIPERBAIKI DISINI)
-    val calendar = remember { java.util.Calendar.getInstance() }
-    val jamSekarang = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+    val calendar = remember { Calendar.getInstance() }
+    val jamSekarang = calendar.get(Calendar.HOUR_OF_DAY)
     val teksWaktuSholat = getInfoWaktu(jamSekarang)
 
-    // 4. Data UI
+    // 4. Data UI String
     val namaUser = user?.namaUser ?: "Sobat Ngaji"
     val streakCount = user?.currentStreak ?: 0
     val lastReadSurah = lastReadData?.namaSurah ?: "Belum ada bacaan"
     val lastReadAyat = lastReadData?.ayatTerakhirDibaca ?: 0
-    // Fix logic info ayat
     val lastReadInfo = if (lastReadData != null && lastReadAyat > 0) "Ayat $lastReadAyat" else "(Lanjutkan progressmu)"
+
+    // --- BOTTOM SHEET NOTIFIKASI ---
+    if (showNotificationSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showNotificationSheet = false },
+            containerColor = Color(0xFFF5F5F5)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                // Header Sheet
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Notifikasi",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Tombol Tes Manual (Buat Demo) - Bisa dihapus nanti
+                    TextButton(onClick = { viewModel.testAddNotification() }) {
+                        Text("Tes (+1)", fontSize = 12.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (listNotifikasi.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                        Text("Belum ada notifikasi", color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn {
+                        items(listNotifikasi) { notif ->
+                            // Tentukan Ikon & Warna berdasarkan Tipe
+                            val (icon, color) = when (notif.tipe) {
+                                "ALERT" -> Icons.Default.Warning to Color(0xFFD32F2F) // Merah
+                                "REWARD" -> Icons.Rounded.EmojiEvents to Color(0xFFFFD700) // Emas
+                                else -> Icons.Default.Notifications to Color(0xFF1976D2) // Biru
+                            }
+
+                            NotificationItem(
+                                judul = notif.judul,
+                                pesan = notif.pesan,
+                                icon = icon,
+                                warnaIcon = color,
+                                isRead = notif.isRead
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -105,10 +175,14 @@ fun LayarBeranda(
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             item {
-                // KIRIM PARAMETER WAKTU KE SINI
                 HeaderSection(
                     namaUser = namaUser,
-                    infoWaktu = teksWaktuSholat
+                    infoWaktu = teksWaktuSholat,
+                    unreadCount = unreadCount, // Kirim jumlah notif belum dibaca
+                    onLoncengKlik = {
+                        showNotificationSheet = true
+                        viewModel.tandaiSudahDibaca() // Reset badge jadi 0
+                    }
                 )
             }
 
@@ -141,10 +215,7 @@ fun LayarBeranda(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    LastReadCard(
-                        surah = lastReadSurah,
-                        ayatInfo = lastReadInfo
-                    )
+                    LastReadCard(surah = lastReadSurah, ayatInfo = lastReadInfo)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -167,10 +238,47 @@ fun LayarBeranda(
     }
 }
 
+// --- KOMPONEN ITEM NOTIFIKASI ---
+@Composable
+fun NotificationItem(
+    judul: String,
+    pesan: String,
+    icon: ImageVector,
+    warnaIcon: Color,
+    isRead: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .background(if (isRead) Color.White else Color(0xFFE3F2FD), RoundedCornerShape(12.dp)) // Biru tipis kalau belum dibaca
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(warnaIcon.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = warnaIcon, modifier = Modifier.size(20.dp))
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = judul, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(text = pesan, style = MaterialTheme.typography.bodySmall, color = Color.Gray, maxLines = 2)
+        }
+    }
+}
+
 @Composable
 fun HeaderSection(
     namaUser: String,
-    infoWaktu: String
+    infoWaktu: String,
+    unreadCount: Int, // Terima parameter jumlah
+    onLoncengKlik: () -> Unit // Terima aksi klik
 ) {
     val calendar = Calendar.getInstance()
     val jam = calendar.get(Calendar.HOUR_OF_DAY)
@@ -204,17 +312,34 @@ fun HeaderSection(
                 // Bagian Atas: Salam & Notif
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("Assalamualaikum,", color = Color.White, fontSize = 14.sp) // Naik dikit size-nya
+                        Text("Assalamualaikum,", color = Color.White, fontSize = 14.sp)
                         Text(namaUser, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color.White.copy(alpha = 0.2f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+
+                    // --- ICON LONCENG (UPDATE) ---
+                    IconButton(onClick = onLoncengKlik) {
+                        Box {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+
+                            // TITIK MERAH (BADGE)
+                            if (unreadCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(Color.Red, CircleShape)
+                                        .align(Alignment.TopEnd)
+                                        .border(2.dp, Color.White.copy(alpha=0.2f), CircleShape) // Border halus
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -224,7 +349,6 @@ fun HeaderSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // JAM BESAR
                         Text(
                             text = jamString,
                             color = Color.White,

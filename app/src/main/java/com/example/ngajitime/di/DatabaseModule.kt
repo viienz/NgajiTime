@@ -3,6 +3,7 @@ package com.example.ngajitime.di
 import android.content.Context
 import androidx.room.Room
 import com.example.ngajitime.data.local.AppDatabase
+import com.example.ngajitime.data.local.dao.NotifikasiDao
 import com.example.ngajitime.data.local.dao.SesiDao
 import com.example.ngajitime.data.local.dao.SurahDao
 import com.example.ngajitime.data.local.dao.TargetDao
@@ -58,5 +59,10 @@ object DatabaseModule {
     @Singleton
     fun provideFirestore(): FirebaseFirestore {
         return FirebaseFirestore.getInstance()
+    }
+
+    @Provides
+    fun provideNotifikasiDao(database: AppDatabase): NotifikasiDao {
+        return database.notifikasiDao()
     }
 }

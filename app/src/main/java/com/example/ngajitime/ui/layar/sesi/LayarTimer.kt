@@ -31,6 +31,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun LayarTimer(
@@ -69,18 +80,14 @@ fun LayarTimer(
                 onStop = {
                     viewModel.batalkanTimer()
 
-                    // Hitung Total Detik Target (Misal: 1 menit = 60 detik)
                     val targetDetik = durasiDipilihMenit * 60L
 
-                    // Hitung Durasi Real yang Berjalan
                     val durasiReal = if (status == TimerService.TimerStatus.FINISHED) {
-                        targetDetik // Kalau selesai normal, ambil full target
+                        targetDetik
                     } else {
-                        // Kalau stop tengah jalan: Target - Sisa
                         (targetDetik - waktuTersisa).coerceAtLeast(0)
                     }
 
-                    // Kirim Durasi Asli ke Layar Input
                     onSelesai(durasiReal)
                 }
             )
@@ -147,14 +154,36 @@ fun TampilanSetupTimer(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        TimerChip(
-            label = "Atur Sendiri ✏️",
-            isSelected = false,
+        Surface(
             onClick = { showCustomDialog = true },
-            modifier = Modifier.width(130.dp)
-        )
+            shape = RoundedCornerShape(50), // Membuat sudut bulat sempurna (Pill)
+            color = Color.White.copy(alpha = 0.15f), // Latar transparan halus
+            modifier = Modifier.wrapContentWidth() // PENTING: Lebar menyesuaikan isi teks!
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp), // Padding dalam
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Atur Sendiri",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+
+                Spacer(modifier = Modifier.width(8.dp)) // Jarak Teks ke Ikon
+
+                Icon(
+                    imageVector = Icons.Default.Edit, // Ikon Pensil
+                    contentDescription = "Edit Waktu",
+                    tint = Color(0xFFFFC107), // Warna Kuning Emas (agar serasi dengan teks menit)
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -238,6 +267,80 @@ fun DialogCustomWaktu(
     )
 }
 
+@Composable
+fun PulsingTimerDisplay(
+    waktu: String,
+    isRunning: Boolean,
+    pesanStatus: String
+) {
+    val warnaEmas = Color(0xFFFFD700)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+
+    // Animasi Skala (Lebih halus)
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isRunning) 1.1f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.1f,
+        targetValue = if (isRunning) 0.25f else 0.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(300.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(230.dp)
+                .scale(scale)
+                .background(
+                    color = warnaEmas.copy(alpha = alpha),
+                    shape = CircleShape
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .size(230.dp)
+                .background(Color.Transparent, CircleShape)
+                .border(4.dp, warnaEmas, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = waktu,
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 2.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = pesanStatus,
+                    fontSize = 16.sp,
+                    color = if (isRunning) warnaEmas else Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
 
 // COUNTDOWN ANIMASI
 @Composable
@@ -249,10 +352,15 @@ fun TampilanCountdown(
     val jam = detikSisa / 3600
     val menit = (detikSisa % 3600) / 60
     val detik = detikSisa % 60
-    val waktuFormat = String.format("%02d : %02d : %02d", jam, menit, detik)
 
-    val pesanStatus = if (status == TimerService.TimerStatus.FINISHED) "Waktu Habis! 🎉" else "Sedang Mengaji..."
-    val warnaStatus = if (status == TimerService.TimerStatus.FINISHED) Color(0xFFFFD700) else Color.White
+    val waktuFormat = String.format("%02d:%02d:%02d", jam, menit, detik)
+
+    val isRunning = status == TimerService.TimerStatus.RUNNING
+    val pesanStatus = when (status) {
+        TimerService.TimerStatus.FINISHED -> "Waktu Habis!"
+        TimerService.TimerStatus.RUNNING -> "Fokus Mengaji..."
+        else -> "Mode Jeda"
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -266,7 +374,7 @@ fun TampilanCountdown(
             Text(
                 text = "FOCUS MODE",
                 style = TextStyle(
-                    color = Color(0xFFFFD700), // Emas
+                    color = Color(0xFFFFD700),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp
@@ -281,32 +389,11 @@ fun TampilanCountdown(
             modifier = Modifier.align(Alignment.Center),
             contentAlignment = Alignment.Center
         ) {
-            // Lingkaran Aura
-            Canvas(modifier = Modifier.size(280.dp)) {
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.1f),
-                    style = Stroke(width = 3.dp.toPx())
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = waktuFormat,
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = warnaStatus,
-                        shadow = Shadow(color = warnaStatus, blurRadius = 20f)
-                    )
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = pesanStatus,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 16.sp
-                )
-            }
+            PulsingTimerDisplay(
+                waktu = waktuFormat,
+                isRunning = isRunning,
+                pesanStatus = pesanStatus
+            )
         }
 
         Button(
@@ -325,7 +412,7 @@ fun TampilanCountdown(
             Icon(if (status == TimerService.TimerStatus.FINISHED) Icons.Default.Check else Icons.Default.Stop, null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (status == TimerService.TimerStatus.FINISHED) "SELESAI & INPUT" else "BATALKAN",
+                text = if (status == TimerService.TimerStatus.FINISHED) "SELESAI & SIMPAN" else "BATALKAN",
                 fontWeight = FontWeight.Bold
             )
         }

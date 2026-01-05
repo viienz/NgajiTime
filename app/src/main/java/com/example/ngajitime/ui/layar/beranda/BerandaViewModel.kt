@@ -2,6 +2,8 @@ package com.example.ngajitime.ui.layar.beranda
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ngajitime.data.local.dao.NotifikasiDao // <-- Import Baru
+import com.example.ngajitime.data.local.entity.NotifikasiEntity // <-- Import Baru
 import com.example.ngajitime.data.local.entity.SurahProgress
 import com.example.ngajitime.data.local.entity.TargetUser
 import com.example.ngajitime.data.repository.NgajiRepository
@@ -29,10 +31,15 @@ data class KalenderItemData(
 @HiltViewModel
 class BerandaViewModel @Inject constructor(
     private val repository: NgajiRepository,
-    private val estimasiWaktuUseCase: EstimasiWaktuUseCase
+    private val estimasiWaktuUseCase: EstimasiWaktuUseCase,
+    private val notifikasiDao: NotifikasiDao // <--- 1. INJECT DAO NOTIFIKASI DISINI
 ) : ViewModel() {
 
-    //DATA USER
+    // ==========================================
+    // BAGIAN 1: FITUR LAMA (User, Progress, Kalender)
+    // ==========================================
+
+    // DATA USER
     val userTarget: StateFlow<TargetUser?> = repository.getUserTarget()
         .stateIn(
             scope = viewModelScope,
@@ -40,7 +47,7 @@ class BerandaViewModel @Inject constructor(
             initialValue = null
         )
 
-    //PROGRESS HARIAN
+    // PROGRESS HARIAN
     private val _halamanHariIni = MutableStateFlow(0)
     val halamanHariIni: StateFlow<Int> = _halamanHariIni
 
@@ -54,14 +61,14 @@ class BerandaViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
 
-    //TERAKHIR DIBACA
-    val lastRead: StateFlow<SurahProgress?> = repository.allSurah // <--- Ganti ini (Hapus getAllSurahProgress())
+    // TERAKHIR DIBACA
+    val lastRead: StateFlow<SurahProgress?> = repository.allSurah
         .combine(MutableStateFlow(true)) { list, _ ->
             list.maxByOrNull { it.lastUpdated }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    //mendeteksi riwayat ngaji minggu ini
+    // KALENDER MINGGUAN
     val listKalender: StateFlow<List<KalenderItemData>> = repository.allRiwayatSesi
         .map { listSesi ->
             val calendar = Calendar.getInstance()
@@ -71,8 +78,8 @@ class BerandaViewModel @Inject constructor(
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
 
             val hasilList = mutableListOf<KalenderItemData>()
-            val formatHari = SimpleDateFormat("EEE", Locale("id", "ID")) // "Min", "Sen"
-            val formatTanggal = SimpleDateFormat("dd", Locale("id", "ID")) // "21"
+            val formatHari = SimpleDateFormat("EEE", Locale("id", "ID"))
+            val formatTanggal = SimpleDateFormat("dd", Locale("id", "ID"))
 
             for (i in 0..6) {
                 val calStart = calendar.clone() as Calendar
@@ -91,7 +98,6 @@ class BerandaViewModel @Inject constructor(
 
                 val adaSesi = listSesi.any { it.tanggalSesi in startMillis..endMillis }
 
-
                 val isToday = (calendar.get(Calendar.DAY_OF_YEAR) == todayDayOfYear) &&
                         (calendar.get(Calendar.YEAR) == todayYear)
 
@@ -99,7 +105,7 @@ class BerandaViewModel @Inject constructor(
                     KalenderItemData(
                         hari = formatHari.format(calendar.time),
                         tanggal = formatTanggal.format(calendar.time),
-                        isAdaSesi = adaSesi, // Ini kunci warnanya (True = Hijau)
+                        isAdaSesi = adaSesi,
                         isHariIni = isToday
                     )
                 )
@@ -110,6 +116,51 @@ class BerandaViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+
+    // ==========================================
+    // BAGIAN 2: FITUR BARU (NOTIFIKASI)
+    // ==========================================
+
+    // List Notifikasi (Untuk ditampilkan di BottomSheet)
+    val listNotifikasi: StateFlow<List<NotifikasiEntity>> = notifikasiDao.getAllNotifikasi()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Jumlah Belum Dibaca (Untuk Titik Merah Lonceng)
+    val unreadCount: StateFlow<Int> = notifikasiDao.getUnreadCount()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    // Fungsi: Reset titik merah saat lonceng dibuka
+    fun tandaiSudahDibaca() {
+        viewModelScope.launch {
+            notifikasiDao.markAllAsRead()
+        }
+    }
+
+    // Fungsi: Test Tambah Notifikasi Manual (Agar tombol 'Tes +1' di UI jalan)
+    fun testAddNotification() {
+        viewModelScope.launch {
+            notifikasiDao.insertNotifikasi(
+                NotifikasiEntity(
+                    judul = "Tes Notifikasi",
+                    pesan = "Halo! Ini adalah notifikasi percobaan dari sistem lokal.",
+                    tipe = "INFO",
+                    isRead = false
+                )
+            )
+        }
+    }
+
+    // ==========================================
+    // BAGIAN 3: INITIALIZATION & LOGIC LAIN
+    // ==========================================
 
     init {
         hitungProgressHariIni()
